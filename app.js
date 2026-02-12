@@ -684,14 +684,49 @@ class UpdateStatusModal {
             
             const filesToProcess = files.slice(0, 6);
             
+            // Adicionar contador
+            const counter = document.createElement('p');
+            counter.style.cssText = 'margin-bottom: 12px; font-weight: bold; color: #dc2626;';
+            counter.textContent = `📷 ${filesToProcess.length} foto(s) selecionada(s)`;
+            preview.appendChild(counter);
+            
             filesToProcess.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    const img = document.createElement('img');
-                    img.src = event.target.result;
-                    img.dataset.base64 = event.target.result;
-                    img.dataset.index = index;
-                    preview.appendChild(img);
+                    // Comprimir imagem para economizar espaço
+                    const imgElement = new Image();
+                    imgElement.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Redimensionar mantendo proporção (max 800px)
+                        let width = imgElement.width;
+                        let height = imgElement.height;
+                        const maxSize = 800;
+                        
+                        if (width > height && width > maxSize) {
+                            height = (height / width) * maxSize;
+                            width = maxSize;
+                        } else if (height > maxSize) {
+                            width = (width / height) * maxSize;
+                            height = maxSize;
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(imgElement, 0, 0, width, height);
+                        
+                        // Comprimir para JPEG 70% qualidade
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // Mostrar preview
+                        const img = document.createElement('img');
+                        img.src = compressedBase64;
+                        img.dataset.base64 = compressedBase64;
+                        img.dataset.index = index;
+                        preview.appendChild(img);
+                    };
+                    imgElement.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
             });
@@ -965,8 +1000,8 @@ class ReportsManager {
                     <td>${v.concessionaria}</td>
                     <td>${v.chassi}</td>
                     <td>${v.desmontadoPor || '-'}</td>
-                    <td>${v.aplicador || '-'}</td>
-                    <td>${v.montador || '-'}</td>
+                    <td>${v.aplicadoPor || v.aplicador || '-'}</td>
+                    <td>${v.montadoPor || v.montador || '-'}</td>
                     <td>${v.observacoes || '-'}</td>
                 </tr>
             `;
