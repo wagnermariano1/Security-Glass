@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#dc2626">
+    <title>Security Glass - Sistema de Controle</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div id="app">
+        <!-- Tela de Login -->
+        <div id="loginScreen" class="screen active">
+            <div class="login-container">
+                <div class="logo">
+                    <img src="logo.png" alt="Security Glass" class="logo-img-login">
+                    <p>Sistema de Controle</p>
+                </div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Usuário</label>
+                        <select id="userSelect" required>
+                            <option value="">Selecione...</option>
+                            <option value="wagner">Wagner (Gestor)</option>
+                            <option value="vinicius">Vinicius (Gerente)</option>
+                            <option value="jonas">Jonas (Aplicador)</option>
+                            <option value="maycon">Maycon (Aplicador)</option>
+                            <option value="rafael">Rafael (Montador)</option>
+                            <option value="arthur">Arthur (Montador)</option>
+                            <option value="claiton">Claiton (Montador)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="passwordInput" required placeholder="Digite sua senha">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                    <button type="button" id="changePasswordBtn" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Alterar Senha</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Principal -->
+        <div id="dashboardScreen" class="screen">
+            <header class="app-header">
+                <div class="header-content">
+                    <div class="header-logo">
+                        <img src="logo.png" alt="Security Glass" class="header-logo-img">
+                    </div>
+                    <div class="header-actions">
+                        <span id="userNameDisplay"></span>
+                        <button id="logoutBtn" class="btn-icon">Sair</button>
+                    </div>
+                </div>
+                <div class="tabs">
+                    <button class="tab active" data-tab="dashboard">Dashboard</button>
+                    <button class="tab" data-tab="vehicles">Veículos</button>
+                    <button class="tab manager-only" data-tab="reports">Relatórios</button>
+                    <button class="tab manager-only" data-tab="team">Equipe</button>
+                </div>
+            </header>
+
+            <main class="app-main">
+                <!-- Tab Dashboard -->
+                <div id="dashboardTab" class="tab-content active">
+                    <div class="stats-cards">
+                        <div class="stat-card blue">
+                            <h3 id="countCadastrado">0</h3>
+                            <p>Cadastrados</p>
+                        </div>
+                        <div class="stat-card orange">
+                            <h3 id="countDesmontado">0</h3>
+                            <p>Desmontados</p>
+                        </div>
+                        <div class="stat-card yellow">
+                            <h3 id="countAplicado">0</h3>
+                            <p>A Montar</p>
+                        </div>
+                        <div class="stat-card green">
+                            <h3 id="countFinalizado">0</h3>
+                            <p>Finalizados (Mês)</p>
+                        </div>
+                    </div>
+
+                    <button id="newVehicleBtn" class="btn btn-primary manager-only" style="margin: 20px 0;">
+                        + Novo Veículo
+                    </button>
+
+                    <div class="kanban-board">
+                        <div class="kanban-column">
+                            <h3 class="column-header blue">Cadastrados</h3>
+                            <div id="columnCadastrado" class="column-content"></div>
+                        </div>
+                        <div class="kanban-column">
+                            <h3 class="column-header orange">Desmontados (A Aplicar)</h3>
+                            <div id="columnDesmontado" class="column-content"></div>
+                        </div>
+                        <div class="kanban-column">
+                            <h3 class="column-header yellow">A Montar</h3>
+                            <div id="columnAplicado" class="column-content"></div>
+                        </div>
+                        <div class="kanban-column">
+                            <h3 class="column-header green">Finalizados</h3>
+                            <div id="columnFinalizado" class="column-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Veículos -->
+                <div id="vehiclesTab" class="tab-content">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="Buscar por chassi, modelo, concessionária...">
+                    </div>
+                    <div id="vehiclesList" class="vehicles-list"></div>
+                </div>
+
+                <!-- Tab Relatórios -->
+                <div id="reportsTab" class="tab-content manager-only">
+                    <div class="report-controls">
+                        <select id="reportMonth">
+                            <option value="">Mês Atual</option>
+                        </select>
+                        <button id="exportReportBtn" class="btn btn-secondary">Exportar Relatório</button>
+                    </div>
+                    <div id="reportContent" class="report-content"></div>
+                </div>
+
+                <!-- Tab Equipe -->
+                <div id="teamTab" class="tab-content manager-only">
+                    <h3>Gerenciar Equipe</h3>
+                    <div class="team-section">
+                        <h4>Aplicadores</h4>
+                        <div id="aplicadoresList" class="team-list"></div>
+                        <button id="addAplicadorBtn" class="btn btn-secondary">+ Adicionar Aplicador</button>
+                    </div>
+                    <div class="team-section">
+                        <h4>Montadores</h4>
+                        <div id="montadoresList" class="team-list"></div>
+                        <button id="addMontadorBtn" class="btn btn-secondary">+ Adicionar Montador</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Modal Novo Veículo -->
+        <div id="newVehicleModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Novo Veículo</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="newVehicleForm">
+                    <div class="form-section">
+                        <label class="btn btn-secondary upload-btn">
+                            📷 Capturar/Enviar Foto
+                            <input type="file" id="vehiclePhoto" accept="image/*" capture="environment" style="display:none">
+                        </label>
+                        <div id="photoPreview" class="photo-preview"></div>
+                        <button type="button" id="extractDataBtn" class="btn btn-secondary" style="display:none">
+                            🔍 Extrair Dados da Foto
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Concessionária *</label>
+                        <input type="text" id="concessionaria" list="concessionariasList" required>
+                        <datalist id="concessionariasList"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Local</label>
+                        <input type="text" id="local" placeholder="Ex: RioRio C.I.O">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Número do Chassi *</label>
+                        <input type="text" id="chassi" required>
+                        <small id="chassiWarning" class="warning-text"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modelo do Veículo *</label>
+                        <input type="text" id="modelo" list="modelosList" required>
+                        <datalist id="modelosList"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea id="observacoes" rows="3" placeholder="Detalhes importantes sobre este veículo..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aplicador</label>
+                        <select id="aplicador">
+                            <option value="">A definir</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Montador</label>
+                        <select id="montador">
+                            <option value="">A definir</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Detalhes do Veículo -->
+        <div id="vehicleDetailModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Detalhes do Veículo</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div id="vehicleDetailContent"></div>
+            </div>
+        </div>
+
+        <!-- Modal Atualizar Status -->
+        <div id="updateStatusModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="updateStatusTitle">Atualizar Status</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="updateStatusForm">
+                    <input type="hidden" id="updateVehicleId">
+                    <input type="hidden" id="updateAction">
+                    
+                    <div id="changeMontadorSection" class="form-section" style="display:none">
+                        <label>Trocar Montador (Opcional)</label>
+                        <select id="changeMontadorSelect">
+                            <option value="">Manter atual</option>
+                        </select>
+                    </div>
+
+                    <div id="photoUploadSection" class="form-section" style="display:none">
+                        <label class="btn btn-secondary upload-btn">
+                            📷 Adicionar Fotos da Montagem
+                            <input type="file" id="montagemPhotos" accept="image/*" multiple capture="environment" style="display:none">
+                        </label>
+                        <div id="montagemPhotoPreview" class="photo-preview-grid"></div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Confirmar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Alterar Senha -->
+        <div id="changePasswordModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Alterar Senha</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label>Usuário</label>
+                        <select id="changePasswordUser" required>
+                            <option value="">Selecione...</option>
+                            <option value="wagner">Wagner (Gestor)</option>
+                            <option value="vinicius">Vinicius (Gerente)</option>
+                            <option value="jonas">Jonas (Aplicador)</option>
+                            <option value="maycon">Maycon (Aplicador)</option>
+                            <option value="rafael">Rafael (Montador)</option>
+                            <option value="arthur">Arthur (Montador)</option>
+                            <option value="claiton">Claiton (Montador)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha Atual</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nova Senha</label>
+                        <input type="password" id="newPassword" required minlength="4">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar Nova Senha</label>
+                        <input type="password" id="confirmPassword" required minlength="4">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Alterar Senha</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
