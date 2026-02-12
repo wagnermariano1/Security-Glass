@@ -493,6 +493,61 @@ body {
     border-radius: 8px;
 }
 
+/* Novos estilos para fotos individuais */
+.photo-upload-slot {
+    position: relative;
+}
+
+.upload-btn-small {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.photo-preview-single {
+    margin-top: 8px;
+    min-height: 120px;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    position: relative;
+}
+
+.photo-preview-single img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.photo-preview-single.has-photo {
+    border-style: solid;
+    border-color: var(--primary);
+    background: white;
+}
+
+.photo-preview-single .remove-photo {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
 /* Search */
 .search-bar {
     margin-bottom: 20px;
@@ -603,9 +658,15 @@ body.gestor .tab.manager-only {
 }
 
 /* Gestor não pode editar */
-body.gestor .manager-only:not(.tab):not(.stat-card):not(.kanban-column):not(.report-content):not(.vehicle-card) {
+body.gestor .manager-only:not(.tab):not(.stat-card):not(.kanban-column):not(.report-content):not(.vehicle-card):not(#exportReportBtn) {
     pointer-events: none;
     opacity: 0.6;
+}
+
+/* Gestor PODE exportar relatórios */
+body.gestor #exportReportBtn {
+    pointer-events: all;
+    opacity: 1;
 }
 
 body.gestor #newVehicleBtn,

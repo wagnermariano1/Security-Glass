@@ -242,13 +242,55 @@
                             <option value="">Manter atual</option>
                         </select>
                     </div>
+                    
+                    <!-- Observações da Desmontagem (avarias no vidro) -->
+                    <div id="obsDesmontarSection" class="form-section" style="display:none">
+                        <label>Observações da Desmontagem (avarias, riscos, etc)</label>
+                        <textarea id="obsDesmontar" rows="3" placeholder="Ex: Vidro traseiro com arranhão leve na parte superior..."></textarea>
+                    </div>
 
                     <div id="photoUploadSection" class="form-section" style="display:none">
-                        <label class="btn btn-secondary upload-btn">
-                            📷 Adicionar Fotos da Montagem
-                            <input type="file" id="montagemPhotos" accept="image/*" multiple capture="environment" style="display:none">
-                        </label>
-                        <div id="montagemPhotoPreview" class="photo-preview-grid"></div>
+                        <h4 style="margin-bottom: 16px;">📷 Fotos da Montagem</h4>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                            <!-- Foto 1 -->
+                            <div class="photo-upload-slot">
+                                <label class="btn btn-secondary upload-btn-small" style="width: 100%;">
+                                    📷 Foto 1
+                                    <input type="file" id="photo1" accept="image/*" capture="environment" style="display:none" onchange="UpdateStatusModal.handlePhotoUpload(1, this)">
+                                </label>
+                                <div id="preview1" class="photo-preview-single"></div>
+                            </div>
+                            
+                            <!-- Foto 2 -->
+                            <div class="photo-upload-slot">
+                                <label class="btn btn-secondary upload-btn-small" style="width: 100%;">
+                                    📷 Foto 2
+                                    <input type="file" id="photo2" accept="image/*" capture="environment" style="display:none" onchange="UpdateStatusModal.handlePhotoUpload(2, this)">
+                                </label>
+                                <div id="preview2" class="photo-preview-single"></div>
+                            </div>
+                            
+                            <!-- Foto 3 -->
+                            <div class="photo-upload-slot">
+                                <label class="btn btn-secondary upload-btn-small" style="width: 100%;">
+                                    📷 Foto 3
+                                    <input type="file" id="photo3" accept="image/*" capture="environment" style="display:none" onchange="UpdateStatusModal.handlePhotoUpload(3, this)">
+                                </label>
+                                <div id="preview3" class="photo-preview-single"></div>
+                            </div>
+                            
+                            <!-- Foto 4 -->
+                            <div class="photo-upload-slot">
+                                <label class="btn btn-secondary upload-btn-small" style="width: 100%;">
+                                    📷 Foto 4
+                                    <input type="file" id="photo4" accept="image/*" capture="environment" style="display:none" onchange="UpdateStatusModal.handlePhotoUpload(4, this)">
+                                </label>
+                                <div id="preview4" class="photo-preview-single"></div>
+                            </div>
+                        </div>
+                        
+                        <p id="photoCounter" style="font-weight: bold; color: #dc2626; text-align: center;"></p>
                     </div>
 
                     <div class="modal-actions">

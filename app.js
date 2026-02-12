@@ -265,9 +265,16 @@ class Dashboard {
             ReportsManager.loadReport();
         });
 
-        document.getElementById('exportReportBtn')?.addEventListener('click', () => {
-            ReportsManager.exportReport();
-        });
+        const exportBtn = document.getElementById('exportReportBtn');
+        if (exportBtn) {
+            // Remover listeners antigos
+            const newBtn = exportBtn.cloneNode(true);
+            exportBtn.parentNode.replaceChild(newBtn, exportBtn);
+            // Adicionar novo listener
+            newBtn.addEventListener('click', () => {
+                ReportsManager.exportReport();
+            });
+        }
 
         document.getElementById('addAplicadorBtn')?.addEventListener('click', () => {
             TeamManager.addMember('aplicador');
@@ -386,6 +393,19 @@ class Dashboard {
 
     static createVehicleCard(vehicle) {
         const actions = this.getVehicleActions(vehicle);
+        const role = APP_STATE.currentRole;
+        
+        // Decidir qual OBS mostrar:
+        // - OBS do Vinicius (cadastro) só aparece para montador e só se status = 'cadastrado'
+        // - OBS do montador (desmontagem) aparece para todos após desmontar
+        let obsToShow = '';
+        if (vehicle.status === 'cadastrado' && role === 'montador' && vehicle.observacoes) {
+            // Montador vê OBS do Vinicius (cadastro) quando ainda não desmontou
+            obsToShow = `<p style="color: #dc2626;"><strong>OBS Cadastro:</strong> ${vehicle.observacoes}</p>`;
+        } else if (vehicle.status !== 'cadastrado' && vehicle.obsDesmontar) {
+            // Todos veem OBS do montador (desmontagem) após ser desmontado
+            obsToShow = `<p style="color: #dc2626;"><strong>OBS:</strong> ${vehicle.obsDesmontar}</p>`;
+        }
         
         return `
             <div class="vehicle-card">
@@ -393,7 +413,7 @@ class Dashboard {
                 <p><strong>Chassi:</strong> ${vehicle.chassi}</p>
                 <p><strong>Concessionária:</strong> ${vehicle.concessionaria}</p>
                 ${vehicle.local ? `<p><strong>Local:</strong> ${vehicle.local}</p>` : ''}
-                ${vehicle.observacoes ? `<p style="color: #dc2626;"><strong>OBS:</strong> ${vehicle.observacoes}</p>` : ''}
+                ${obsToShow}
                 <p><strong>Aplicador:</strong> ${vehicle.aplicador || 'A definir'}</p>
                 <p><strong>Montador:</strong> ${vehicle.montador || 'A definir'}</p>
                 ${vehicle.cadastroData ? `<p><small>Cadastrado: ${Utils.formatDate(vehicle.cadastroData)}</small></p>` : ''}
@@ -451,17 +471,7 @@ class Dashboard {
     }
 
     static markAsDesmontado(vehicleId) {
-        const vehicles = DB.getVehicles();
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        
-        if (vehicle) {
-            vehicle.status = 'desmontado';
-            vehicle.desmontagemData = new Date().toISOString();
-            vehicle.desmontadoPor = APP_STATE.currentUserFullName;
-            
-            DB.saveVehicles(vehicles);
-            this.renderDashboard();
-        }
+        UpdateStatusModal.show(vehicleId, 'desmontado');
     }
 
     static markAsAplicado(vehicleId) {
@@ -479,6 +489,7 @@ class Dashboard {
     }
 
     static markAsMontado(vehicleId) {
+        console.log('markAsMontado chamado para veículo:', vehicleId);
         UpdateStatusModal.show(vehicleId, 'montado');
     }
 
@@ -621,6 +632,7 @@ class VehicleForm {
 // Modal de Atualização de Status
 class UpdateStatusModal {
     static show(vehicleId, action) {
+        console.log('UpdateStatusModal.show chamado:', vehicleId, action);
         const modal = document.getElementById('updateStatusModal');
         const form = document.getElementById('updateStatusForm');
         const title = document.getElementById('updateStatusTitle');
@@ -630,17 +642,38 @@ class UpdateStatusModal {
         document.getElementById('updateVehicleId').value = vehicleId;
         document.getElementById('updateAction').value = action;
         
-        // Limpar preview de fotos anteriores
-        document.getElementById('montagemPhotoPreview').innerHTML = '';
-        document.getElementById('montagemPhotos').value = '';
+        // Limpar os 4 slots de fotos
+        for (let i = 1; i <= 4; i++) {
+            const preview = document.getElementById(`preview${i}`);
+            if (preview) {
+                preview.innerHTML = '';
+                preview.classList.remove('has-photo');
+            }
+            const input = document.getElementById(`photo${i}`);
+            if (input) {
+                input.value = '';
+            }
+        }
+        const counter = document.getElementById('photoCounter');
+        if (counter) counter.textContent = '';
         
         // Buscar veículo
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
-        if (action === 'montado') {
+        const obsDesmontarSection = document.getElementById('obsDesmontarSection');
+        
+        if (action === 'desmontado') {
+            title.textContent = 'Marcar como Desmontado';
+            photoSection.style.display = 'none';
+            changeMontadorSection.style.display = 'none';
+            obsDesmontarSection.style.display = 'block';
+            // Limpar campo
+            document.getElementById('obsDesmontar').value = '';
+        } else if (action === 'montado') {
             title.textContent = 'Marcar como Montado';
             photoSection.style.display = 'block';
+            obsDesmontarSection.style.display = 'none';
             this.setupPhotoUpload();
             
             // Mostrar opção de trocar montador
@@ -650,9 +683,15 @@ class UpdateStatusModal {
             } else {
                 changeMontadorSection.style.display = 'none';
             }
+        } else {
+            // Outras ações
+            photoSection.style.display = 'none';
+            changeMontadorSection.style.display = 'none';
+            obsDesmontarSection.style.display = 'none';
         }
         
         modal.classList.add('active');
+        console.log('Modal deveria estar visível agora');
         
         form.onsubmit = (e) => {
             e.preventDefault();
@@ -663,74 +702,99 @@ class UpdateStatusModal {
             btn.addEventListener('click', () => {
                 modal.classList.remove('active');
                 form.reset();
-                document.getElementById('montagemPhotoPreview').innerHTML = '';
-                document.getElementById('montagemPhotos').value = '';
+                
+                // Limpar os 4 slots de fotos
+                for (let i = 1; i <= 4; i++) {
+                    const preview = document.getElementById(`preview${i}`);
+                    if (preview) {
+                        preview.innerHTML = '';
+                        preview.classList.remove('has-photo');
+                    }
+                    const input = document.getElementById(`photo${i}`);
+                    if (input) {
+                        input.value = '';
+                    }
+                }
+                const counter = document.getElementById('photoCounter');
+                if (counter) counter.textContent = '';
             });
         });
     }
 
     static setupPhotoUpload() {
-        const photoInput = document.getElementById('montagemPhotos');
-        const preview = document.getElementById('montagemPhotoPreview');
+        // Sistema novo com 4 slots individuais - não precisa de setup aqui
+        // Cada input chama handlePhotoUpload() diretamente
+    }
+    
+    static handlePhotoUpload(slotNumber, input) {
+        const file = input.files[0];
+        if (!file) return;
         
-        // Criar novo listener (remove o antigo automaticamente)
-        photoInput.onchange = (e) => {
-            preview.innerHTML = '';
-            const files = Array.from(e.target.files);
-            
-            if (files.length > 6) {
-                alert('Máximo de 6 fotos permitidas. Selecionando as 6 primeiras.');
-            }
-            
-            const filesToProcess = files.slice(0, 6);
-            
-            // Adicionar contador
-            const counter = document.createElement('p');
-            counter.style.cssText = 'margin-bottom: 12px; font-weight: bold; color: #dc2626;';
-            counter.textContent = `📷 ${filesToProcess.length} foto(s) selecionada(s)`;
-            preview.appendChild(counter);
-            
-            filesToProcess.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    // Comprimir imagem para economizar espaço
-                    const imgElement = new Image();
-                    imgElement.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Redimensionar mantendo proporção (max 800px)
-                        let width = imgElement.width;
-                        let height = imgElement.height;
-                        const maxSize = 800;
-                        
-                        if (width > height && width > maxSize) {
-                            height = (height / width) * maxSize;
-                            width = maxSize;
-                        } else if (height > maxSize) {
-                            width = (width / height) * maxSize;
-                            height = maxSize;
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(imgElement, 0, 0, width, height);
-                        
-                        // Comprimir para JPEG 70% qualidade
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        // Mostrar preview
-                        const img = document.createElement('img');
-                        img.src = compressedBase64;
-                        img.dataset.base64 = compressedBase64;
-                        img.dataset.index = index;
-                        preview.appendChild(img);
-                    };
-                    imgElement.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imgElement = new Image();
+            imgElement.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Redimensionar mantendo proporção (max 800px)
+                let width = imgElement.width;
+                let height = imgElement.height;
+                const maxSize = 800;
+                
+                if (width > height && width > maxSize) {
+                    height = (height / width) * maxSize;
+                    width = maxSize;
+                } else if (height > maxSize) {
+                    width = (width / height) * maxSize;
+                    height = maxSize;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(imgElement, 0, 0, width, height);
+                
+                // Comprimir para JPEG 70% qualidade
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // Mostrar preview no slot
+                const preview = document.getElementById(`preview${slotNumber}`);
+                preview.innerHTML = `
+                    <img src="${compressedBase64}" data-base64="${compressedBase64}">
+                    <button class="remove-photo" onclick="UpdateStatusModal.removePhoto(${slotNumber})">×</button>
+                `;
+                preview.classList.add('has-photo');
+                
+                // Atualizar contador
+                UpdateStatusModal.updatePhotoCounter();
+            };
+            imgElement.src = e.target.result;
         };
+        reader.readAsDataURL(file);
+    }
+    
+    static removePhoto(slotNumber) {
+        const preview = document.getElementById(`preview${slotNumber}`);
+        preview.innerHTML = '';
+        preview.classList.remove('has-photo');
+        document.getElementById(`photo${slotNumber}`).value = '';
+        UpdateStatusModal.updatePhotoCounter();
+    }
+    
+    static updatePhotoCounter() {
+        let count = 0;
+        for (let i = 1; i <= 4; i++) {
+            const preview = document.getElementById(`preview${i}`);
+            if (preview.classList.contains('has-photo')) {
+                count++;
+            }
+        }
+        const counter = document.getElementById('photoCounter');
+        if (count > 0) {
+            counter.textContent = `📷 ${count} foto(s) adicionada(s)`;
+        } else {
+            counter.textContent = '';
+        }
     }
 
     static submit() {
@@ -741,7 +805,27 @@ class UpdateStatusModal {
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
-        if (vehicle && action === 'montado') {
+        if (vehicle && action === 'desmontado') {
+            // Marcar como desmontado
+            vehicle.status = 'desmontado';
+            vehicle.desmontagemData = new Date().toISOString();
+            vehicle.desmontadoPor = APP_STATE.currentUserFullName;
+            
+            // Salvar observações da desmontagem (avarias)
+            const obsDesmontar = document.getElementById('obsDesmontar').value.trim();
+            if (obsDesmontar) {
+                vehicle.obsDesmontar = obsDesmontar;
+            }
+            
+            DB.saveVehicles(vehicles);
+            Dashboard.renderDashboard();
+            
+            document.getElementById('updateStatusModal').classList.remove('active');
+            document.getElementById('updateStatusForm').reset();
+            
+            alert('Veículo desmontado com sucesso!');
+            
+        } else if (vehicle && action === 'montado') {
             // Verificar se trocou montador
             if (newMontador) {
                 vehicle.montador = newMontador;
@@ -751,26 +835,41 @@ class UpdateStatusModal {
             vehicle.montagemData = new Date().toISOString();
             vehicle.montadoPor = APP_STATE.currentUserFullName;
             
-            // Salvar fotos como base64
-            const preview = document.getElementById('montagemPhotoPreview');
-            const images = preview.querySelectorAll('img');
-            
-            if (images.length > 0) {
-                vehicle.montagemFotos = [];
-                images.forEach(img => {
-                    vehicle.montagemFotos.push(img.dataset.base64 || img.src);
-                });
-            } else {
-                alert('ATENÇÃO: É importante adicionar fotos da montagem!');
-                vehicle.montagemFotos = [];
+            // Salvar fotos dos 4 slots
+            vehicle.montagemFotos = [];
+            for (let i = 1; i <= 4; i++) {
+                const preview = document.getElementById(`preview${i}`);
+                const img = preview.querySelector('img');
+                if (img && img.dataset.base64) {
+                    vehicle.montagemFotos.push(img.dataset.base64);
+                }
             }
+            
+            if (vehicle.montagemFotos.length === 0) {
+                alert('ATENÇÃO: É importante adicionar pelo menos 1 foto da montagem!');
+            }
+            
+            console.log(`Salvando ${vehicle.montagemFotos.length} fotos`); // Debug
             
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
-            document.getElementById('montagemPhotoPreview').innerHTML = '';
+            
+            // Limpar os 4 slots de fotos
+            for (let i = 1; i <= 4; i++) {
+                const preview = document.getElementById(`preview${i}`);
+                if (preview) {
+                    preview.innerHTML = '';
+                    preview.classList.remove('has-photo');
+                }
+                const input = document.getElementById(`photo${i}`);
+                if (input) {
+                    input.value = '';
+                }
+            }
+            document.getElementById('photoCounter').textContent = '';
             
             alert('Status atualizado com sucesso!');
         }
@@ -1021,9 +1120,23 @@ class ReportsManager {
             v.status === 'montado' && Utils.isCurrentMonth(v.montagemData)
         );
         
-        let csv = 'Data Montagem,Modelo,Concessionária,Chassi,Desmontador,Aplicador,Montador,OBS\n';
+        // BOM para Excel reconhecer UTF-8 corretamente
+        // Usar PONTO-E-VÍRGULA (;) que é o padrão do Excel brasileiro
+        let csv = '\uFEFF';
+        csv += 'Concessionária;Local;Modelo;Mês;Desmontador;Aplicador;Montador;OBS Montagem\n';
+        
         finalizados.forEach(v => {
-            csv += `${Utils.formatDate(v.montagemData)},${v.modelo},${v.concessionaria},${v.chassi},${v.desmontadoPor || '-'},${v.aplicadoPor || v.aplicador || '-'},${v.montadoPor || v.montador || '-'},"${v.observacoes || '-'}"\n`;
+            const concessionaria = v.concessionaria || '-';
+            const local = v.local || '-';
+            const modelo = v.modelo || '-';
+            const mes = Utils.getCurrentMonth(); // Mês atual (ex: "2026-02")
+            const desmontador = v.desmontadoPor || '-';
+            const aplicador = v.aplicadoPor || v.aplicador || '-';
+            const montador = v.montadoPor || v.montador || '-';
+            const obsMontagemDesmontagem = (v.obsDesmontar || '-').replace(/;/g, ','); // OBS da desmontagem (avarias)
+            
+            // Nova ordem: Concessionária, Local, Modelo, Mês, Desmontador, Aplicador, Montador, OBS
+            csv += `${concessionaria};${local};${modelo};${mes};${desmontador};${aplicador};${montador};${obsMontagemDesmontagem}\n`;
         });
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1032,6 +1145,9 @@ class ReportsManager {
         a.href = url;
         a.download = `relatorio-security-glass-${Utils.getCurrentMonth()}.csv`;
         a.click();
+        
+        // Limpar URL após download
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 }
 
