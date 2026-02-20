@@ -247,6 +247,8 @@ class Dashboard {
                     VehiclesManager.loadVehiclesList();
                 } else if (targetTab === 'team') {
                     TeamManager.loadTeam();
+                } else if (targetTab === 'espera') {
+                    EsperaManager.loadEspera();
                 }
             });
         });
@@ -356,9 +358,41 @@ class Dashboard {
         }
         
         if (role === 'aplicador') {
-            // Aplicador vê apenas desmontados (todos) e seus aplicados
+            // Aplicador vê:
+            // 1. DESMONTADOS (todos) - normalmente
+            // 2. CADASTRADOS COM PRIORIDADE (onde ele é o aplicador) - antes de desmontar
             cadastrados = [];
             aplicados = aplicados.filter(v => v.aplicador === currentUserName);
+            
+            // PEGAR CADASTRADOS COM PRIORIDADE (onde ele é aplicador)
+            const cadastradosPrioritarios = vehicles.filter(v => 
+                v.status === 'cadastrado' && 
+                v.prioridade && 
+                v.aplicador === currentUserName
+            );
+            
+            // JUNTAR: cadastrados prioritários + desmontados normais
+            desmontados = [...cadastradosPrioritarios, ...desmontados];
+            
+            // ORDENAR DESMONTADOS POR PRIORIDADE
+            // Prioridade 1, 2, 3... primeiro, depois sem prioridade
+            desmontados.sort((a, b) => {
+                // Se A tem prioridade e B não, A vem primeiro
+                if (a.prioridade && !b.prioridade) return -1;
+                // Se B tem prioridade e A não, B vem primeiro
+                if (!a.prioridade && b.prioridade) return 1;
+                // Se ambos têm prioridade, menor número vem primeiro
+                if (a.prioridade && b.prioridade) return a.prioridade - b.prioridade;
+                // Se nenhum tem prioridade, manter ordem original
+                return 0;
+            });
+            
+            // Mostrar filtro de local
+            this.setupLocalFilter(desmontados);
+        } else {
+            // Esconder filtro se não for aplicador
+            const filterSection = document.getElementById('localFilterSection');
+            if (filterSection) filterSection.style.display = 'none';
         }
         
         document.getElementById('countCadastrado').textContent = cadastrados.length;
@@ -370,6 +404,43 @@ class Dashboard {
         this.renderColumn('columnDesmontado', desmontados);
         this.renderColumn('columnAplicado', aplicados);
         this.renderColumn('columnFinalizado', finalizados.slice(0, 20));
+    }
+    
+    static setupLocalFilter(desmontados) {
+        const filterSection = document.getElementById('localFilterSection');
+        const filterSelect = document.getElementById('localFilter');
+        
+        if (!filterSection || !filterSelect) return;
+        
+        // Mostrar seção
+        filterSection.style.display = 'block';
+        
+        // Pegar locais únicos
+        const locais = [...new Set(desmontados.map(v => v.local).filter(l => l))];
+        
+        // Preencher dropdown
+        filterSelect.innerHTML = '<option value="">Todos os locais</option>';
+        locais.forEach(local => {
+            filterSelect.innerHTML += `<option value="${local}">${local}</option>`;
+        });
+        
+        // Listener do filtro
+        filterSelect.onchange = () => {
+            const localSelecionado = filterSelect.value;
+            
+            if (!localSelecionado) {
+                // Mostrar todos
+                this.renderColumn('columnDesmontado', desmontados);
+            } else {
+                // Separar com prioridade e sem prioridade
+                const comPrioridade = desmontados.filter(v => v.prioridade);
+                const semPrioridade = desmontados.filter(v => !v.prioridade && v.local === localSelecionado);
+                
+                // Mostrar: prioridades (todas) + sem prioridade filtradas
+                const filtrados = [...comPrioridade, ...semPrioridade];
+                this.renderColumn('columnDesmontado', filtrados);
+            }
+        };
     }
 
     static renderColumn(columnId, vehicles) {
@@ -409,10 +480,12 @@ class Dashboard {
         
         return `
             <div class="vehicle-card">
+                ${vehicle.prioridade ? `<div style="background: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 0.85rem;">🔥 PRIORIDADE ${vehicle.prioridade}</div>` : ''}
                 <h4>${vehicle.modelo}</h4>
                 <p><strong>Chassi:</strong> ${vehicle.chassi}</p>
                 <p><strong>Concessionária:</strong> ${vehicle.concessionaria}</p>
                 ${vehicle.local ? `<p><strong>Local:</strong> ${vehicle.local}</p>` : ''}
+                ${vehicle.obsUrgencia ? `<p style="color: #dc2626; font-weight: bold;">🚨 ${vehicle.obsUrgencia}</p>` : ''}
                 ${obsToShow}
                 <p><strong>Aplicador:</strong> ${vehicle.aplicador || 'A definir'}</p>
                 <p><strong>Montador:</strong> ${vehicle.montador || 'A definir'}</p>
@@ -465,6 +538,10 @@ class Dashboard {
             if (vehicle.status === 'desmontado') {
                 return '<button class="btn btn-small btn-secondary" onclick="Dashboard.markAsAplicado(\'' + vehicle.id + '\')">Aplicado</button>';
             }
+            // Se é cadastrado COM PRIORIDADE e é dele, mostra aviso
+            if (vehicle.status === 'cadastrado' && vehicle.prioridade && vehicle.aplicador === currentUserName) {
+                return '<span style="background: #fbbf24; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">⏳ Aguardando Desmontagem</span>';
+            }
         }
         
         return '';
@@ -499,6 +576,50 @@ class Dashboard {
                 this.renderDashboard();
             }
         }, 30000);
+        
+        // Verificar automação 18h a cada 5 minutos
+        this.checkEsperaAutomation();
+        setInterval(() => {
+            this.checkEsperaAutomation();
+        }, 5 * 60 * 1000); // 5 minutos
+    }
+    
+    static checkEsperaAutomation() {
+        const now = new Date();
+        const hour = now.getHours();
+        
+        // Configuração: horário padrão 18h (configurável depois)
+        const HORA_LIMITE = 18;
+        
+        // Se passou das 18h, verificar carros cadastrados não desmontados hoje
+        if (hour >= HORA_LIMITE) {
+            const vehicles = DB.getVehicles();
+            const today = new Date().toDateString();
+            let movidosParaEspera = 0;
+            
+            vehicles.forEach(v => {
+                // Se está CADASTRADO e foi cadastrado HOJE e ainda não foi pra espera
+                if (v.status === 'cadastrado' && v.cadastroData) {
+                    const cadastroDate = new Date(v.cadastroData).toDateString();
+                    
+                    // Se foi cadastrado hoje e ainda não desmontou
+                    if (cadastroDate === today) {
+                        // Mover para ESPERA
+                        v.status = 'espera';
+                        v.motivoEspera = 'Não desmontado até 18h';
+                        v.dataEspera = new Date().toISOString();
+                        v.tentouDesmontarPor = 'Automação (Não tentou)';
+                        movidosParaEspera++;
+                    }
+                }
+            });
+            
+            if (movidosParaEspera > 0) {
+                DB.saveVehicles(vehicles);
+                this.renderDashboard();
+                console.log(`Automação 18h: ${movidosParaEspera} veículo(s) movido(s) para ESPERA`);
+            }
+        }
     }
 }
 
@@ -585,6 +706,8 @@ class VehicleForm {
         const chassi = document.getElementById('chassi').value.trim();
         const modelo = document.getElementById('modelo').value.trim();
         const observacoes = document.getElementById('observacoes').value.trim();
+        const prioridade = document.getElementById('prioridade').value.trim();
+        const obsUrgencia = document.getElementById('obsUrgencia').value.trim();
         const aplicador = document.getElementById('aplicador').value;
         const montador = document.getElementById('montador').value;
         
@@ -596,6 +719,8 @@ class VehicleForm {
             chassi,
             modelo,
             observacoes,
+            prioridade: prioridade ? parseInt(prioridade) : null, // Converter para número ou null
+            obsUrgencia,
             aplicador,
             montador,
             status: 'cadastrado',
@@ -662,18 +787,51 @@ class UpdateStatusModal {
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
         const obsDesmontarSection = document.getElementById('obsDesmontarSection');
+        const desmontarChoiceSection = document.getElementById('desmontarChoiceSection');
+        const motivoNaoDesmontarSection = document.getElementById('motivoNaoDesmontarSection');
+        const modalActions = document.getElementById('modalActions');
         
         if (action === 'desmontado') {
-            title.textContent = 'Marcar como Desmontado';
+            title.textContent = 'Desmontagem';
             photoSection.style.display = 'none';
             changeMontadorSection.style.display = 'none';
-            obsDesmontarSection.style.display = 'block';
-            // Limpar campo
+            obsDesmontarSection.style.display = 'none';
+            desmontarChoiceSection.style.display = 'block';
+            motivoNaoDesmontarSection.style.display = 'none';
+            modalActions.style.display = 'none'; // Esconder botões inicialmente
+            
+            // Limpar campos
             document.getElementById('obsDesmontar').value = '';
+            document.getElementById('motivoNaoDesmontar').value = '';
+            
+            // Listeners dos botões SIM/NÃO
+            document.getElementById('btnDesmontouSim').onclick = () => {
+                desmontarChoiceSection.style.display = 'none';
+                obsDesmontarSection.style.display = 'block';
+                motivoNaoDesmontarSection.style.display = 'none';
+                modalActions.style.display = 'flex'; // Mostrar botões
+                document.getElementById('updateAction').value = 'desmontado_sim';
+                // Remover required do motivo
+                document.getElementById('motivoNaoDesmontar').removeAttribute('required');
+            };
+            
+            document.getElementById('btnDesmontouNao').onclick = () => {
+                desmontarChoiceSection.style.display = 'none';
+                obsDesmontarSection.style.display = 'none';
+                motivoNaoDesmontarSection.style.display = 'block';
+                modalActions.style.display = 'flex'; // Mostrar botões
+                document.getElementById('updateAction').value = 'desmontado_nao';
+                // Adicionar required no motivo
+                document.getElementById('motivoNaoDesmontar').setAttribute('required', 'required');
+            };
+            
         } else if (action === 'montado') {
             title.textContent = 'Marcar como Montado';
             photoSection.style.display = 'block';
             obsDesmontarSection.style.display = 'none';
+            desmontarChoiceSection.style.display = 'none';
+            motivoNaoDesmontarSection.style.display = 'none';
+            modalActions.style.display = 'flex'; // Mostrar botões
             this.setupPhotoUpload();
             
             // Mostrar opção de trocar montador
@@ -688,6 +846,9 @@ class UpdateStatusModal {
             photoSection.style.display = 'none';
             changeMontadorSection.style.display = 'none';
             obsDesmontarSection.style.display = 'none';
+            desmontarChoiceSection.style.display = 'none';
+            motivoNaoDesmontarSection.style.display = 'none';
+            modalActions.style.display = 'flex'; // Mostrar botões
         }
         
         modal.classList.add('active');
@@ -802,11 +963,14 @@ class UpdateStatusModal {
         const action = document.getElementById('updateAction').value;
         const newMontador = document.getElementById('changeMontadorSelect')?.value;
         
+        console.log('Submit chamado! Action:', action); // DEBUG
+        
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
-        if (vehicle && action === 'desmontado') {
-            // Marcar como desmontado
+        if (vehicle && action === 'desmontado_sim') {
+            console.log('Processando desmontado_sim'); // DEBUG
+            // DESMONTOU COM SUCESSO
             vehicle.status = 'desmontado';
             vehicle.desmontagemData = new Date().toISOString();
             vehicle.desmontadoPor = APP_STATE.currentUserFullName;
@@ -825,12 +989,54 @@ class UpdateStatusModal {
             
             alert('Veículo desmontado com sucesso!');
             
-        } else if (vehicle && action === 'montado') {
-            // Verificar se trocou montador
-            if (newMontador) {
-                vehicle.montador = newMontador;
+        } else if (vehicle && action === 'desmontado_nao') {
+            // NÃO DESMONTOU - Validar motivo obrigatório
+            const motivo = document.getElementById('motivoNaoDesmontar').value;
+            if (!motivo) {
+                alert('Por favor, selecione o motivo por não ter desmontado!');
+                return;
             }
             
+            // Mover para ESPERA
+            vehicle.status = 'espera';
+            vehicle.motivoEspera = motivo;
+            vehicle.dataEspera = new Date().toISOString();
+            vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
+            
+            DB.saveVehicles(vehicles);
+            Dashboard.renderDashboard();
+            
+            document.getElementById('updateStatusModal').classList.remove('active');
+            document.getElementById('updateStatusForm').reset();
+            
+            alert(`Veículo movido para ABA DE ESPERA. Motivo: ${motivo}`);
+            
+        } else if (vehicle && action === 'montado') {
+            console.log('=== DEBUG MONTAGEM ===');
+            console.log('newMontador:', newMontador);
+            console.log('vehicle.montador:', vehicle.montador);
+            console.log('Vai trocar?', newMontador && newMontador.trim() !== '' && newMontador !== vehicle.montador);
+            
+            // Verificar se trocou montador (só se selecionou um diferente)
+            if (newMontador && newMontador.trim() !== '' && newMontador !== vehicle.montador) {
+                console.log('TROCANDO MONTADOR!');
+                // TROCAR MONTADOR: não finaliza, volta pra "aplicado" para o novo montador
+                vehicle.montador = newMontador;
+                vehicle.status = 'aplicado'; // Volta pra fila
+                
+                DB.saveVehicles(vehicles);
+                Dashboard.renderDashboard();
+                
+                document.getElementById('updateStatusModal').classList.remove('active');
+                document.getElementById('updateStatusForm').reset();
+                
+                alert(`Veículo transferido para ${newMontador}. Ele precisa finalizar a montagem.`);
+                return; // Para aqui, não salva fotos
+            }
+            
+            console.log('NÃO TROCOU, vai finalizar normalmente');
+            
+            // Se NÃO trocou montador, finaliza normalmente
             vehicle.status = 'montado';
             vehicle.montagemData = new Date().toISOString();
             vehicle.montadoPor = APP_STATE.currentUserFullName;
@@ -1217,6 +1423,101 @@ document.addEventListener('DOMContentLoaded', () => {
     AuthSystem.init();
     AuthSystem.checkAuth();
 });
+
+// Gerenciador da Aba de Espera
+class EsperaManager {
+    static loadEspera() {
+        const vehicles = DB.getVehicles();
+        const emEspera = vehicles.filter(v => v.status === 'espera');
+        
+        const list = document.getElementById('esperaList');
+        
+        if (emEspera.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo em espera!</p></div>';
+            return;
+        }
+        
+        list.innerHTML = emEspera.map(v => `
+            <div class="espera-card" style="background: white; padding: 20px; margin-bottom: 16px; border-radius: 8px; border-left: 4px solid #f97316;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0;">${v.modelo}</h3>
+                        <p style="margin: 4px 0;"><strong>Chassi:</strong> ${v.chassi}</p>
+                        <p style="margin: 4px 0;"><strong>Concessionária:</strong> ${v.concessionaria}</p>
+                        <p style="margin: 4px 0;"><strong>Local:</strong> ${v.local || '-'}</p>
+                    </div>
+                    <span style="background: #f97316; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem;">EM ESPERA</span>
+                </div>
+                
+                <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                    <p style="margin: 0; color: #92400e;"><strong>❌ Motivo:</strong> ${v.motivoEspera}</p>
+                    <p style="margin: 4px 0 0 0; color: #92400e; font-size: 0.9rem;"><strong>Tentou desmontar:</strong> ${v.tentouDesmontarPor} - ${Utils.formatDateTime(v.dataEspera)}</p>
+                </div>
+                
+                ${v.obsUrgencia ? `<p style="color: #dc2626; margin-bottom: 8px;"><strong>🚨 Urgência:</strong> ${v.obsUrgencia}</p>` : ''}
+                
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn btn-primary" onclick="EsperaManager.reatribuir('${v.id}')">🔄 Reatribuir Montador</button>
+                    <button class="btn btn-secondary" onclick="EsperaManager.voltarFila('${v.id}')">↩️ Voltar pra Fila</button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    static reatribuir(vehicleId) {
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle) return;
+        
+        const team = DB.getTeam();
+        const montadores = team.montadores;
+        
+        if (montadores.length === 0) {
+            alert('Nenhum montador cadastrado!');
+            return;
+        }
+        
+        const options = montadores.map(m => `<option value="${m}">${m}</option>`).join('');
+        const novoMontador = prompt(`Reatribuir para qual montador?\n\nMontadores disponíveis:\n${montadores.join(', ')}\n\nDigite o nome:`);
+        
+        if (novoMontador && montadores.includes(novoMontador)) {
+            vehicle.montador = novoMontador;
+            vehicle.status = 'cadastrado'; // Volta pro início
+            delete vehicle.motivoEspera;
+            delete vehicle.dataEspera;
+            delete vehicle.tentouDesmontarPor;
+            
+            DB.saveVehicles(vehicles);
+            this.loadEspera();
+            Dashboard.renderDashboard();
+            
+            alert(`Veículo reatribuído para ${novoMontador}!`);
+        } else if (novoMontador) {
+            alert('Montador inválido!');
+        }
+    }
+    
+    static voltarFila(vehicleId) {
+        if (!confirm('Voltar este veículo para a fila de CADASTRADOS?')) return;
+        
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle) return;
+        
+        vehicle.status = 'cadastrado';
+        delete vehicle.motivoEspera;
+        delete vehicle.dataEspera;
+        delete vehicle.tentouDesmontarPor;
+        
+        DB.saveVehicles(vehicles);
+        this.loadEspera();
+        Dashboard.renderDashboard();
+        
+        alert('Veículo voltou para a fila!');
+    }
+}
 
 // Service Worker
 if ('serviceWorker' in navigator) {

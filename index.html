@@ -58,6 +58,7 @@
                 <div class="tabs">
                     <button class="tab active" data-tab="dashboard">Dashboard</button>
                     <button class="tab" data-tab="vehicles">Veículos</button>
+                    <button class="tab manager-only" data-tab="espera">⏸️ Espera</button>
                     <button class="tab manager-only" data-tab="reports">Relatórios</button>
                     <button class="tab manager-only" data-tab="team">Equipe</button>
                 </div>
@@ -96,6 +97,14 @@
                         </div>
                         <div class="kanban-column">
                             <h3 class="column-header orange">Desmontados (A Aplicar)</h3>
+                            <!-- Filtro por Local (só aplicadores) -->
+                            <div id="localFilterSection" style="display: none; padding: 8px; background: #fff; border-radius: 4px; margin-bottom: 8px;">
+                                <label style="font-size: 0.85rem; color: #64748b; display: block; margin-bottom: 4px;">Filtrar por local:</label>
+                                <select id="localFilter" style="width: 100%; padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                    <option value="">Todos os locais</option>
+                                </select>
+                                <small style="color: #64748b; display: block; margin-top: 4px;">⚠️ Prioridades sempre aparecem no topo</small>
+                            </div>
                             <div id="columnDesmontado" class="column-content"></div>
                         </div>
                         <div class="kanban-column">
@@ -115,6 +124,15 @@
                         <input type="text" id="searchInput" placeholder="Buscar por chassi, modelo, concessionária...">
                     </div>
                     <div id="vehiclesList" class="vehicles-list"></div>
+                </div>
+                
+                <!-- Tab Espera (só gerente) -->
+                <div id="esperaTab" class="tab-content manager-only">
+                    <div class="espera-header">
+                        <h2>⏸️ Veículos em Espera</h2>
+                        <p style="color: #64748b;">Veículos que não foram desmontados até às 18h. Decida a ação e recoloque na fila.</p>
+                    </div>
+                    <div id="esperaList" class="espera-list"></div>
                 </div>
 
                 <!-- Tab Relatórios -->
@@ -191,6 +209,17 @@
                         <label>Observações</label>
                         <textarea id="observacoes" rows="3" placeholder="Detalhes importantes sobre este veículo..."></textarea>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Prioridade (1 = mais urgente)</label>
+                        <input type="number" id="prioridade" min="0" placeholder="Ex: 1, 2, 3... (deixe vazio se não tem prioridade)">
+                        <small style="color: #64748b;">Carros com prioridade aparecem primeiro para aplicadores</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Observações de Urgência</label>
+                        <textarea id="obsUrgencia" rows="2" placeholder="Ex: Cliente VIP, entrega hoje às 17h..."></textarea>
+                    </div>
 
                     <div class="form-group">
                         <label>Aplicador</label>
@@ -243,6 +272,29 @@
                         </select>
                     </div>
                     
+                    <!-- Botões: DESMONTOU ou NÃO DESMONTOU -->
+                    <div id="desmontarChoiceSection" class="form-section" style="display:none">
+                        <label style="font-weight: bold; margin-bottom: 12px; display: block;">Conseguiu desmontar o veículo?</label>
+                        <div style="display: flex; gap: 12px;">
+                            <button type="button" id="btnDesmontouSim" class="btn btn-primary" style="flex: 1;">✅ Sim, Desmontei</button>
+                            <button type="button" id="btnDesmontouNao" class="btn btn-secondary" style="flex: 1;">❌ Não Desmontei</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Motivo por NÃO desmontar -->
+                    <div id="motivoNaoDesmontarSection" class="form-section" style="display:none">
+                        <label style="color: #dc2626; font-weight: bold;">Por que não desmontou? *</label>
+                        <select id="motivoNaoDesmontar">
+                            <option value="">Selecione o motivo</option>
+                            <option value="Não liberado">Não liberado</option>
+                            <option value="Não estava na loja">Não estava na loja</option>
+                            <option value="Aguardando peça">Aguardando peça</option>
+                            <option value="Concessionária fechada">Concessionária fechada</option>
+                            <option value="Cliente não autorizou">Cliente não autorizou</option>
+                        </select>
+                        <small style="color: #dc2626;">Este veículo irá para a ABA DE ESPERA</small>
+                    </div>
+                    
                     <!-- Observações da Desmontagem (avarias no vidro) -->
                     <div id="obsDesmontarSection" class="form-section" style="display:none">
                         <label>Observações da Desmontagem (avarias, riscos, etc)</label>
@@ -293,7 +345,7 @@
                         <p id="photoCounter" style="font-weight: bold; color: #dc2626; text-align: center;"></p>
                     </div>
 
-                    <div class="modal-actions">
+                    <div class="modal-actions" id="modalActions">
                         <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Confirmar</button>
                     </div>
