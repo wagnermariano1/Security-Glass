@@ -1,5 +1,7 @@
-// Security Glass App - Main JavaScript v2.0
+// Security Glass App - Main JavaScript v4.7
 // Novo fluxo: Cadastrado → Desmontado → Aplicado → Montado
+
+console.log('🔧 Security Glass v4.7 - Automação 18h corrigida + Botões OK');
 
 const DB = {
     getVehicles: () => JSON.parse(localStorage.getItem('vehicles') || '[]'),
@@ -249,6 +251,8 @@ class Dashboard {
                     TeamManager.loadTeam();
                 } else if (targetTab === 'espera') {
                     EsperaManager.loadEspera();
+                } else if (targetTab === 'sequencia') {
+                    SequenciaManager.loadSequencia();
                 }
             });
         });
@@ -285,6 +289,17 @@ class Dashboard {
         document.getElementById('addMontadorBtn')?.addEventListener('click', () => {
             TeamManager.addMember('montador');
         });
+        
+        const saveSeqBtn = document.getElementById('saveSequenciaBtn');
+        if (saveSeqBtn) {
+            // Remover listeners antigos
+            const newSeqBtn = saveSeqBtn.cloneNode(true);
+            saveSeqBtn.parentNode.replaceChild(newSeqBtn, saveSeqBtn);
+            // Adicionar novo listener
+            newSeqBtn.addEventListener('click', () => {
+                SequenciaManager.saveSequencia();
+            });
+        }
     }
 
     static loadTeamMembers() {
@@ -350,8 +365,20 @@ class Dashboard {
         
         // Filtros por permissão
         if (role === 'montador') {
-            // Montador vê apenas seus carros em cadastrado e aplicado
+            console.log('=== DEBUG MONTADOR ===');
+            console.log('currentUserName:', currentUserName);
+            console.log('Cadastrados antes filtro:', cadastrados.map(v => ({
+                modelo: v.modelo,
+                montador: v.montador,
+                status: v.status,
+                prioridade: v.prioridade
+            })));
+            
+            // Montador vê TODOS os seus carros cadastrados (com ou sem prioridade)
             cadastrados = cadastrados.filter(v => v.montador === currentUserName);
+            
+            console.log('Cadastrados DEPOIS filtro:', cadastrados.map(v => v.modelo));
+            
             aplicados = aplicados.filter(v => v.montador === currentUserName);
             // Não vê desmontados (são para aplicadores)
             desmontados = [];
@@ -359,10 +386,13 @@ class Dashboard {
         
         if (role === 'aplicador') {
             // Aplicador vê:
-            // 1. DESMONTADOS (todos) - normalmente
+            // 1. DESMONTADOS (só os dele) - ordenados por sequência
             // 2. CADASTRADOS COM PRIORIDADE (onde ele é o aplicador) - antes de desmontar
             cadastrados = [];
             aplicados = aplicados.filter(v => v.aplicador === currentUserName);
+            
+            // FILTRAR: Só desmontados onde ele é o aplicador (COM ou SEM sequência)
+            desmontados = desmontados.filter(v => v.aplicador === currentUserName);
             
             // PEGAR CADASTRADOS COM PRIORIDADE (onde ele é aplicador)
             const cadastradosPrioritarios = vehicles.filter(v => 
@@ -371,19 +401,29 @@ class Dashboard {
                 v.aplicador === currentUserName
             );
             
-            // JUNTAR: cadastrados prioritários + desmontados normais
+            // JUNTAR: cadastrados prioritários + desmontados dele
             desmontados = [...cadastradosPrioritarios, ...desmontados];
             
-            // ORDENAR DESMONTADOS POR PRIORIDADE
-            // Prioridade 1, 2, 3... primeiro, depois sem prioridade
+            // ORDENAR POR SEQUÊNCIA DE APLICAÇÃO (definida por Vinicius)
             desmontados.sort((a, b) => {
-                // Se A tem prioridade e B não, A vem primeiro
+                // Se tem sequência definida, usar ela
+                if (a.sequenciaAplicacao && b.sequenciaAplicacao) {
+                    return a.sequenciaAplicacao - b.sequenciaAplicacao;
+                }
+                // Sequência definida vem primeiro
+                if (a.sequenciaAplicacao) return -1;
+                if (b.sequenciaAplicacao) return 1;
+                
+                // Se não tem sequência, ordenar por prioridade (antigo)
                 if (a.prioridade && !b.prioridade) return -1;
-                // Se B tem prioridade e A não, B vem primeiro
                 if (!a.prioridade && b.prioridade) return 1;
-                // Se ambos têm prioridade, menor número vem primeiro
                 if (a.prioridade && b.prioridade) return a.prioridade - b.prioridade;
-                // Se nenhum tem prioridade, manter ordem original
+                
+                // Por fim, por data de desmontagem (mais antigo primeiro)
+                if (a.desmontagemData && b.desmontagemData) {
+                    return new Date(a.desmontagemData) - new Date(b.desmontagemData);
+                }
+                
                 return 0;
             });
             
@@ -480,6 +520,7 @@ class Dashboard {
         
         return `
             <div class="vehicle-card">
+                ${vehicle.sequenciaAplicacao ? `<div style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 1rem;">📋 Sequência ${vehicle.sequenciaAplicacao}</div>` : ''}
                 ${vehicle.prioridade ? `<div style="background: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 0.85rem;">🔥 PRIORIDADE ${vehicle.prioridade}</div>` : ''}
                 <h4>${vehicle.modelo}</h4>
                 <p><strong>Chassi:</strong> ${vehicle.chassi}</p>
@@ -598,12 +639,14 @@ class Dashboard {
             let movidosParaEspera = 0;
             
             vehicles.forEach(v => {
-                // Se está CADASTRADO e foi cadastrado HOJE e ainda não foi pra espera
+                // Se está CADASTRADO e foi cadastrado HOJE
                 if (v.status === 'cadastrado' && v.cadastroData) {
-                    const cadastroDate = new Date(v.cadastroData).toDateString();
+                    const cadastroDate = new Date(v.cadastroData);
+                    const cadastroDateStr = cadastroDate.toDateString();
+                    const cadastroHour = cadastroDate.getHours();
                     
-                    // Se foi cadastrado hoje e ainda não desmontou
-                    if (cadastroDate === today) {
+                    // Se foi cadastrado HOJE e ANTES das 18h (e ainda não desmontou)
+                    if (cadastroDateStr === today && cadastroHour < HORA_LIMITE) {
                         // Mover para ESPERA
                         v.status = 'espera';
                         v.motivoEspera = 'Não desmontado até 18h';
@@ -826,12 +869,14 @@ class UpdateStatusModal {
             };
             
         } else if (action === 'montado') {
+            console.log('📸 Abrindo modal de MONTAGEM - botões devem aparecer!');
             title.textContent = 'Marcar como Montado';
             photoSection.style.display = 'block';
             obsDesmontarSection.style.display = 'none';
             desmontarChoiceSection.style.display = 'none';
             motivoNaoDesmontarSection.style.display = 'none';
             modalActions.style.display = 'flex'; // Mostrar botões
+            console.log('✅ modalActions.style.display =', modalActions.style.display);
             this.setupPhotoUpload();
             
             // Mostrar opção de trocar montador
@@ -1424,6 +1469,92 @@ document.addEventListener('DOMContentLoaded', () => {
     AuthSystem.checkAuth();
 });
 
+// Gerenciador de Sequência de Aplicação
+class SequenciaManager {
+    static loadSequencia() {
+        const vehicles = DB.getVehicles();
+        const desmontados = vehicles.filter(v => v.status === 'desmontado');
+        const team = DB.getTeam();
+        
+        const list = document.getElementById('sequenciaList');
+        
+        if (desmontados.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo desmontado aguardando aplicação!</p></div>';
+            return;
+        }
+        
+        // Ordenar por sequência (se já tiver) ou por data de desmontagem
+        desmontados.sort((a, b) => {
+            if (a.sequenciaAplicacao && b.sequenciaAplicacao) {
+                return a.sequenciaAplicacao - b.sequenciaAplicacao;
+            }
+            if (a.sequenciaAplicacao) return -1;
+            if (b.sequenciaAplicacao) return 1;
+            return 0;
+        });
+        
+        list.innerHTML = desmontados.map((v, index) => `
+            <div class="sequencia-card" style="background: white; padding: 20px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 16px; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0;">${v.modelo}</h3>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Chassi:</strong> ${v.chassi}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Concessionária:</strong> ${v.concessionaria}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Local:</strong> ${v.local || '-'}</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #3b82f6;">Sequência</label>
+                        <input 
+                            type="number" 
+                            id="seq_${v.id}" 
+                            value="${v.sequenciaAplicacao || (index + 1)}" 
+                            min="1" 
+                            style="width: 80px; padding: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; border: 2px solid #3b82f6; border-radius: 6px;"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #3b82f6;">Aplicador</label>
+                        <select 
+                            id="app_${v.id}" 
+                            style="width: 100%; padding: 10px; font-size: 1rem; border: 2px solid #3b82f6; border-radius: 6px;"
+                        >
+                            ${team.aplicadores.map(name => 
+                                `<option value="${name}" ${v.aplicador === name ? 'selected' : ''}>${name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    static saveSequencia() {
+        const vehicles = DB.getVehicles();
+        const desmontados = vehicles.filter(v => v.status === 'desmontado');
+        
+        let saved = 0;
+        desmontados.forEach(v => {
+            const seqInput = document.getElementById(`seq_${v.id}`);
+            const appSelect = document.getElementById(`app_${v.id}`);
+            
+            if (seqInput && appSelect) {
+                v.sequenciaAplicacao = parseInt(seqInput.value);
+                v.aplicador = appSelect.value;
+                saved++;
+            }
+        });
+        
+        DB.saveVehicles(vehicles);
+        Dashboard.renderDashboard();
+        
+        alert(`✅ Sequência salva com sucesso! ${saved} veículo(s) atualizado(s).`);
+        
+        this.loadSequencia(); // Recarregar lista
+    }
+}
+
 // Gerenciador da Aba de Espera
 class EsperaManager {
     static loadEspera() {
@@ -1478,10 +1609,33 @@ class EsperaManager {
             return;
         }
         
-        const options = montadores.map(m => `<option value="${m}">${m}</option>`).join('');
-        const novoMontador = prompt(`Reatribuir para qual montador?\n\nMontadores disponíveis:\n${montadores.join(', ')}\n\nDigite o nome:`);
+        // Criar modal customizado com dropdown
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
         
-        if (novoMontador && montadores.includes(novoMontador)) {
+        modal.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
+                <h3 style="margin: 0 0 16px 0;">🔄 Reatribuir Montador</h3>
+                <p style="margin-bottom: 16px; color: #64748b;">Selecione o novo montador:</p>
+                <select id="selectNovoMontador" style="width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #3b82f6; border-radius: 6px; margin-bottom: 20px;">
+                    ${montadores.map(m => `<option value="${m}">${m}</option>`).join('')}
+                </select>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="btnCancelarReatribuir" style="padding: 10px 20px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button id="btnConfirmarReatribuir" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('btnCancelarReatribuir').onclick = () => {
+            document.body.removeChild(modal);
+        };
+        
+        document.getElementById('btnConfirmarReatribuir').onclick = () => {
+            const novoMontador = document.getElementById('selectNovoMontador').value;
+            
             vehicle.montador = novoMontador;
             vehicle.status = 'cadastrado'; // Volta pro início
             delete vehicle.motivoEspera;
@@ -1492,10 +1646,9 @@ class EsperaManager {
             this.loadEspera();
             Dashboard.renderDashboard();
             
-            alert(`Veículo reatribuído para ${novoMontador}!`);
-        } else if (novoMontador) {
-            alert('Montador inválido!');
-        }
+            document.body.removeChild(modal);
+            alert(`✅ Veículo reatribuído para ${novoMontador}!`);
+        };
     }
     
     static voltarFila(vehicleId) {
