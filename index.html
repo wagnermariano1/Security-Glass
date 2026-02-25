@@ -58,7 +58,9 @@
                 <div class="tabs">
                     <button class="tab active" data-tab="dashboard">Dashboard</button>
                     <button class="tab" data-tab="vehicles">Veículos</button>
-                    <button class="tab manager-only" data-tab="sequencia">📋 Sequência</button>
+                    <button class="tab manager-only" data-tab="rotaDesmontagem">🚗 Rota Desmontagem</button>
+                    <button class="tab manager-only" data-tab="rotaAplicacao">🎨 Rota Aplicação</button>
+                    <button class="tab manager-only" data-tab="rotaMontagem">🔧 Rota Montagem</button>
                     <button class="tab manager-only" data-tab="espera">⏸️ Espera</button>
                     <button class="tab manager-only" data-tab="reports">Relatórios</button>
                     <button class="tab manager-only" data-tab="team">Equipe</button>
@@ -127,15 +129,39 @@
                     <div id="vehiclesList" class="vehicles-list"></div>
                 </div>
                 
-                <!-- Tab Sequência (só gerente) -->
-                <div id="sequenciaTab" class="tab-content manager-only">
+                <!-- Tab Rota Desmontagem (só gerente) -->
+                <div id="rotaDesmontagemTab" class="tab-content manager-only">
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h2 style="margin: 0 0 8px 0;">🚗 Rota de Desmontagem</h2>
+                        <p style="color: #64748b; margin: 0;">Defina a ordem e o montador para cada veículo cadastrado. Montadores verão na ordem que você definir.</p>
+                    </div>
+                    <div id="rotaDesmontagemList"></div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button id="saveRotaDesmontagemBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 1rem;">💾 Salvar Rota de Desmontagem</button>
+                    </div>
+                </div>
+                
+                <!-- Tab Rota Aplicação (antiga Sequência - só gerente) -->
+                <div id="rotaAplicacaoTab" class="tab-content manager-only">
                     <div class="sequencia-header" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 8px 0;">📋 Sequência de Aplicação</h2>
+                        <h2 style="margin: 0 0 8px 0;">🎨 Rota de Aplicação</h2>
                         <p style="color: #64748b; margin: 0;">Defina a ordem e o aplicador para cada veículo desmontado. Aplicadores verão na ordem que você definir.</p>
                     </div>
-                    <div id="sequenciaList"></div>
+                    <div id="rotaAplicacaoList"></div>
                     <div style="text-align: center; margin-top: 20px;">
-                        <button id="saveSequenciaBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 1rem;">💾 Salvar Sequência</button>
+                        <button id="saveRotaAplicacaoBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 1rem;">💾 Salvar Rota de Aplicação</button>
+                    </div>
+                </div>
+                
+                <!-- Tab Rota Montagem (só gerente) -->
+                <div id="rotaMontagemTab" class="tab-content manager-only">
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h2 style="margin: 0 0 8px 0;">🔧 Rota de Montagem</h2>
+                        <p style="color: #64748b; margin: 0;">Defina a ordem e o montador para cada veículo aplicado. Montadores verão na ordem que você definir.</p>
+                    </div>
+                    <div id="rotaMontagemList"></div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button id="saveRotaMontagemBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 1rem;">💾 Salvar Rota de Montagem</button>
                     </div>
                 </div>
                 
@@ -312,6 +338,12 @@
                     <div id="obsDesmontarSection" class="form-section" style="display:none">
                         <label>Observações da Desmontagem (avarias, riscos, etc)</label>
                         <textarea id="obsDesmontar" rows="3" placeholder="Ex: Vidro traseiro com arranhão leve na parte superior..."></textarea>
+                    </div>
+                    
+                    <!-- Observações do Aplicador (avarias ao receber) -->
+                    <div id="obsAplicadorSection" class="form-section" style="display:none">
+                        <label>Observações ao Receber o Vidro (avarias, defeitos, etc)</label>
+                        <textarea id="obsAplicador" rows="3" placeholder="Ex: Vidro chegou com risco no canto, película amassada..."></textarea>
                     </div>
 
                     <div id="photoUploadSection" class="form-section" style="display:none">

@@ -251,8 +251,12 @@ class Dashboard {
                     TeamManager.loadTeam();
                 } else if (targetTab === 'espera') {
                     EsperaManager.loadEspera();
-                } else if (targetTab === 'sequencia') {
-                    SequenciaManager.loadSequencia();
+                } else if (targetTab === 'rotaDesmontagem') {
+                    RotaDesmontagemManager.loadRota();
+                } else if (targetTab === 'rotaAplicacao') {
+                    RotaAplicacaoManager.loadRota();
+                } else if (targetTab === 'rotaMontagem') {
+                    RotaMontagemManager.loadRota();
                 }
             });
         });
@@ -290,14 +294,30 @@ class Dashboard {
             TeamManager.addMember('montador');
         });
         
-        const saveSeqBtn = document.getElementById('saveSequenciaBtn');
-        if (saveSeqBtn) {
-            // Remover listeners antigos
-            const newSeqBtn = saveSeqBtn.cloneNode(true);
-            saveSeqBtn.parentNode.replaceChild(newSeqBtn, saveSeqBtn);
-            // Adicionar novo listener
-            newSeqBtn.addEventListener('click', () => {
-                SequenciaManager.saveSequencia();
+        const saveRotaAplicacaoBtn = document.getElementById('saveRotaAplicacaoBtn');
+        if (saveRotaAplicacaoBtn) {
+            const newBtn = saveRotaAplicacaoBtn.cloneNode(true);
+            saveRotaAplicacaoBtn.parentNode.replaceChild(newBtn, saveRotaAplicacaoBtn);
+            newBtn.addEventListener('click', () => {
+                RotaAplicacaoManager.saveRota();
+            });
+        }
+        
+        const saveRotaDesmontagemBtn = document.getElementById('saveRotaDesmontagemBtn');
+        if (saveRotaDesmontagemBtn) {
+            const newBtn = saveRotaDesmontagemBtn.cloneNode(true);
+            saveRotaDesmontagemBtn.parentNode.replaceChild(newBtn, saveRotaDesmontagemBtn);
+            newBtn.addEventListener('click', () => {
+                RotaDesmontagemManager.saveRota();
+            });
+        }
+        
+        const saveRotaMontagemBtn = document.getElementById('saveRotaMontagemBtn');
+        if (saveRotaMontagemBtn) {
+            const newBtn = saveRotaMontagemBtn.cloneNode(true);
+            saveRotaMontagemBtn.parentNode.replaceChild(newBtn, saveRotaMontagemBtn);
+            newBtn.addEventListener('click', () => {
+                RotaMontagemManager.saveRota();
             });
         }
     }
@@ -377,9 +397,35 @@ class Dashboard {
             // Montador vê TODOS os seus carros cadastrados (com ou sem prioridade)
             cadastrados = cadastrados.filter(v => v.montador === currentUserName);
             
+            // ORDENAR CADASTRADOS POR ROTA DE DESMONTAGEM
+            cadastrados.sort((a, b) => {
+                if (a.rotaDesmontagem && b.rotaDesmontagem) {
+                    return a.rotaDesmontagem - b.rotaDesmontagem;
+                }
+                if (a.rotaDesmontagem) return -1;
+                if (b.rotaDesmontagem) return 1;
+                return 0;
+            });
+            
             console.log('Cadastrados DEPOIS filtro:', cadastrados.map(v => v.modelo));
             
             aplicados = aplicados.filter(v => v.montador === currentUserName);
+            
+            // ORDENAR APLICADOS POR ROTA DE MONTAGEM
+            aplicados.sort((a, b) => {
+                if (a.rotaMontagem && b.rotaMontagem) {
+                    return a.rotaMontagem - b.rotaMontagem;
+                }
+                if (a.rotaMontagem) return -1;
+                if (b.rotaMontagem) return 1;
+                return 0;
+            });
+            
+            // FILTRAR FINALIZADOS: só vê que ELE desmontou OU montou
+            finalizados = finalizados.filter(v => 
+                v.desmontadoPor === currentUserName || v.montadoPor === currentUserName
+            );
+            
             // Não vê desmontados (são para aplicadores)
             desmontados = [];
         }
@@ -426,6 +472,9 @@ class Dashboard {
                 
                 return 0;
             });
+            
+            // FILTRAR FINALIZADOS: só vê que ELE aplicou
+            finalizados = finalizados.filter(v => v.aplicadoPor === currentUserName);
             
             // Mostrar filtro de local
             this.setupLocalFilter(desmontados);
@@ -520,7 +569,9 @@ class Dashboard {
         
         return `
             <div class="vehicle-card">
-                ${vehicle.sequenciaAplicacao ? `<div style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 1rem;">📋 Sequência ${vehicle.sequenciaAplicacao}</div>` : ''}
+                ${vehicle.rotaDesmontagem && vehicle.status === 'cadastrado' && role === 'montador' ? `<div style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 1rem;">🚗 Rota Desmontagem ${vehicle.rotaDesmontagem}</div>` : ''}
+                ${vehicle.sequenciaAplicacao && role === 'aplicador' ? `<div style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 1rem;">🎨 Rota Aplicação ${vehicle.sequenciaAplicacao}</div>` : ''}
+                ${vehicle.rotaMontagem && vehicle.status === 'aplicado' && role === 'montador' ? `<div style="background: #eab308; color: white; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 1rem;">🔧 Rota Montagem ${vehicle.rotaMontagem}</div>` : ''}
                 ${vehicle.prioridade ? `<div style="background: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; font-size: 0.85rem;">🔥 PRIORIDADE ${vehicle.prioridade}</div>` : ''}
                 <h4>${vehicle.modelo}</h4>
                 <p><strong>Chassi:</strong> ${vehicle.chassi}</p>
@@ -593,17 +644,8 @@ class Dashboard {
     }
 
     static markAsAplicado(vehicleId) {
-        const vehicles = DB.getVehicles();
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        
-        if (vehicle) {
-            vehicle.status = 'aplicado';
-            vehicle.aplicacaoData = new Date().toISOString();
-            vehicle.aplicadoPor = APP_STATE.currentUserFullName;
-            
-            DB.saveVehicles(vehicles);
-            this.renderDashboard();
-        }
+        console.log('markAsAplicado chamado para veículo:', vehicleId);
+        UpdateStatusModal.show(vehicleId, 'aplicado');
     }
 
     static markAsMontado(vehicleId) {
@@ -832,6 +874,7 @@ class UpdateStatusModal {
         const obsDesmontarSection = document.getElementById('obsDesmontarSection');
         const desmontarChoiceSection = document.getElementById('desmontarChoiceSection');
         const motivoNaoDesmontarSection = document.getElementById('motivoNaoDesmontarSection');
+        const obsAplicadorSection = document.getElementById('obsAplicadorSection');
         const modalActions = document.getElementById('modalActions');
         
         if (action === 'desmontado') {
@@ -839,6 +882,7 @@ class UpdateStatusModal {
             photoSection.style.display = 'none';
             changeMontadorSection.style.display = 'none';
             obsDesmontarSection.style.display = 'none';
+            obsAplicadorSection.style.display = 'none';
             desmontarChoiceSection.style.display = 'block';
             motivoNaoDesmontarSection.style.display = 'none';
             modalActions.style.display = 'none'; // Esconder botões inicialmente
@@ -868,11 +912,27 @@ class UpdateStatusModal {
                 document.getElementById('motivoNaoDesmontar').setAttribute('required', 'required');
             };
             
+        } else if (action === 'aplicado') {
+            title.textContent = 'Marcar como Aplicado';
+            photoSection.style.display = 'none';
+            obsDesmontarSection.style.display = 'none';
+            desmontarChoiceSection.style.display = 'none';
+            motivoNaoDesmontarSection.style.display = 'none';
+            changeMontadorSection.style.display = 'none';
+            
+            // Mostrar campo de OBS do Aplicador
+            const obsAplicadorSection = document.getElementById('obsAplicadorSection');
+            obsAplicadorSection.style.display = 'block';
+            document.getElementById('obsAplicador').value = '';
+            
+            modalActions.style.display = 'flex'; // Mostrar botões
+            
         } else if (action === 'montado') {
             console.log('📸 Abrindo modal de MONTAGEM - botões devem aparecer!');
             title.textContent = 'Marcar como Montado';
             photoSection.style.display = 'block';
             obsDesmontarSection.style.display = 'none';
+            obsAplicadorSection.style.display = 'none';
             desmontarChoiceSection.style.display = 'none';
             motivoNaoDesmontarSection.style.display = 'none';
             modalActions.style.display = 'flex'; // Mostrar botões
@@ -891,6 +951,7 @@ class UpdateStatusModal {
             photoSection.style.display = 'none';
             changeMontadorSection.style.display = 'none';
             obsDesmontarSection.style.display = 'none';
+            obsAplicadorSection.style.display = 'none';
             desmontarChoiceSection.style.display = 'none';
             motivoNaoDesmontarSection.style.display = 'none';
             modalActions.style.display = 'flex'; // Mostrar botões
@@ -1056,6 +1117,26 @@ class UpdateStatusModal {
             
             alert(`Veículo movido para ABA DE ESPERA. Motivo: ${motivo}`);
             
+        } else if (vehicle && action === 'aplicado') {
+            // APLICADO - Salvar observações do aplicador
+            vehicle.status = 'aplicado';
+            vehicle.aplicacaoData = new Date().toISOString();
+            vehicle.aplicadoPor = APP_STATE.currentUserFullName;
+            
+            // Salvar observações do aplicador (avarias ao receber)
+            const obsAplicador = document.getElementById('obsAplicador').value.trim();
+            if (obsAplicador) {
+                vehicle.obsAplicador = obsAplicador;
+            }
+            
+            DB.saveVehicles(vehicles);
+            Dashboard.renderDashboard();
+            
+            document.getElementById('updateStatusModal').classList.remove('active');
+            document.getElementById('updateStatusForm').reset();
+            
+            alert('Veículo marcado como aplicado!');
+            
         } else if (vehicle && action === 'montado') {
             console.log('=== DEBUG MONTAGEM ===');
             console.log('newMontador:', newMontador);
@@ -1172,7 +1253,7 @@ class VehicleDetailModal {
                         <div class="timeline-icon">🛡️</div>
                         <div class="timeline-content">
                             <h5>Película Aplicada</h5>
-                            <p>${Utils.formatDateTime(vehicle.aplicacaoData)} - por ${vehicle.aplicadoPor}</p>
+                            <p>${Utils.formatDateTime(vehicle.aplicacaoData)} - por ${vehicle.aplicadoPor}${vehicle.obsAplicador ? ` <strong style="color: #dc2626;">(${vehicle.obsAplicador})</strong>` : ''}</p>
                         </div>
                     </div>
                     ` : ''}
@@ -1469,14 +1550,149 @@ document.addEventListener('DOMContentLoaded', () => {
     AuthSystem.checkAuth();
 });
 
-// Gerenciador de Sequência de Aplicação
-class SequenciaManager {
-    static loadSequencia() {
+// Gerenciador de Rota de Desmontagem
+class RotaDesmontagemManager {
+    static loadRota() {
+        const vehicles = DB.getVehicles();
+        const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
+        const team = DB.getTeam();
+        
+        const list = document.getElementById('rotaDesmontagemList');
+        
+        if (cadastrados.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo cadastrado aguardando desmontagem!</p></div>';
+            return;
+        }
+        
+        // Ordenar por rotaDesmontagem (se já tiver) ou por data de cadastro
+        cadastrados.sort((a, b) => {
+            if (a.rotaDesmontagem && b.rotaDesmontagem) {
+                return a.rotaDesmontagem - b.rotaDesmontagem;
+            }
+            if (a.rotaDesmontagem) return -1;
+            if (b.rotaDesmontagem) return 1;
+            return 0;
+        });
+        
+        // Calcular sugestão de número por montador (1, 2, 3... para cada montador)
+        const contadorPorMontador = {};
+        
+        list.innerHTML = cadastrados.map((v) => {
+            const montadorAtual = v.montador || team.montadores[0];
+            
+            // Se não tem rota definida, sugerir próximo número desse montador
+            let rotaSugerida = v.rotaDesmontagem;
+            if (!rotaSugerida) {
+                if (!contadorPorMontador[montadorAtual]) {
+                    contadorPorMontador[montadorAtual] = 1;
+                }
+                rotaSugerida = contadorPorMontador[montadorAtual];
+                contadorPorMontador[montadorAtual]++;
+            }
+            
+            return `
+            <div class="rota-card" style="background: white; padding: 20px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 16px; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0;">${v.modelo}</h3>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Chassi:</strong> ${v.chassi}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Concessionária:</strong> ${v.concessionaria}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Local:</strong> ${v.local || '-'}</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #3b82f6;">Rota</label>
+                        <input 
+                            type="number" 
+                            id="rotaDesm_${v.id}" 
+                            value="${rotaSugerida}" 
+                            min="1" 
+                            style="width: 80px; padding: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; border: 2px solid #3b82f6; border-radius: 6px;"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #3b82f6;">Montador</label>
+                        <select 
+                            id="montDesm_${v.id}" 
+                            style="width: 100%; padding: 10px; font-size: 1rem; border: 2px solid #3b82f6; border-radius: 6px;"
+                        >
+                            ${team.montadores.map(name => 
+                                `<option value="${name}" ${montadorAtual === name ? 'selected' : ''}>${name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+    }
+    
+    static saveRota() {
+        const vehicles = DB.getVehicles();
+        const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
+        
+        // VALIDAR: verificar números duplicados por montador
+        const rotasPorMontador = {};
+        let temDuplicado = false;
+        let mensagemErro = '';
+        
+        cadastrados.forEach(v => {
+            const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
+            const montSelect = document.getElementById(`montDesm_${v.id}`);
+            
+            if (rotaInput && montSelect) {
+                const rota = parseInt(rotaInput.value);
+                const montador = montSelect.value;
+                
+                if (!rotasPorMontador[montador]) {
+                    rotasPorMontador[montador] = [];
+                }
+                
+                // Verificar se já existe esse número para esse montador
+                if (rotasPorMontador[montador].includes(rota)) {
+                    temDuplicado = true;
+                    mensagemErro = `❌ Erro: O montador ${montador} tem o número ${rota} repetido!\n\nCada montador deve ter números únicos na sua rota.`;
+                }
+                
+                rotasPorMontador[montador].push(rota);
+            }
+        });
+        
+        if (temDuplicado) {
+            alert(mensagemErro);
+            return;
+        }
+        
+        // Se passou na validação, salvar
+        let saved = 0;
+        cadastrados.forEach(v => {
+            const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
+            const montSelect = document.getElementById(`montDesm_${v.id}`);
+            
+            if (rotaInput && montSelect) {
+                v.rotaDesmontagem = parseInt(rotaInput.value);
+                v.montador = montSelect.value;
+                saved++;
+            }
+        });
+        
+        DB.saveVehicles(vehicles);
+        Dashboard.renderDashboard();
+        
+        alert(`✅ Rota de Desmontagem salva com sucesso! ${saved} veículo(s) atualizado(s).`);
+        
+        this.loadRota();
+    }
+}
+
+// Gerenciador de Rota de Aplicação
+class RotaAplicacaoManager {
+    static loadRota() {
         const vehicles = DB.getVehicles();
         const desmontados = vehicles.filter(v => v.status === 'desmontado');
         const team = DB.getTeam();
         
-        const list = document.getElementById('sequenciaList');
+        const list = document.getElementById('rotaAplicacaoList');
         
         if (desmontados.length === 0) {
             list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo desmontado aguardando aplicação!</p></div>';
@@ -1493,7 +1709,23 @@ class SequenciaManager {
             return 0;
         });
         
-        list.innerHTML = desmontados.map((v, index) => `
+        // Calcular sugestão de número por aplicador (1, 2, 3... para cada aplicador)
+        const contadorPorAplicador = {};
+        
+        list.innerHTML = desmontados.map((v) => {
+            const aplicadorAtual = v.aplicador || team.aplicadores[0];
+            
+            // Se não tem rota definida, sugerir próximo número desse aplicador
+            let rotaSugerida = v.sequenciaAplicacao;
+            if (!rotaSugerida) {
+                if (!contadorPorAplicador[aplicadorAtual]) {
+                    contadorPorAplicador[aplicadorAtual] = 1;
+                }
+                rotaSugerida = contadorPorAplicador[aplicadorAtual];
+                contadorPorAplicador[aplicadorAtual]++;
+            }
+            
+            return `
             <div class="sequencia-card" style="background: white; padding: 20px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
                 <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 16px; align-items: center;">
                     <div>
@@ -1508,7 +1740,7 @@ class SequenciaManager {
                         <input 
                             type="number" 
                             id="seq_${v.id}" 
-                            value="${v.sequenciaAplicacao || (index + 1)}" 
+                            value="${rotaSugerida}" 
                             min="1" 
                             style="width: 80px; padding: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; border: 2px solid #3b82f6; border-radius: 6px;"
                         >
@@ -1521,19 +1753,52 @@ class SequenciaManager {
                             style="width: 100%; padding: 10px; font-size: 1rem; border: 2px solid #3b82f6; border-radius: 6px;"
                         >
                             ${team.aplicadores.map(name => 
-                                `<option value="${name}" ${v.aplicador === name ? 'selected' : ''}>${name}</option>`
+                                `<option value="${name}" ${aplicadorAtual === name ? 'selected' : ''}>${name}</option>`
                             ).join('')}
                         </select>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
     
-    static saveSequencia() {
+    static saveRota() {
         const vehicles = DB.getVehicles();
         const desmontados = vehicles.filter(v => v.status === 'desmontado');
         
+        // VALIDAR: verificar números duplicados por aplicador
+        const rotasPorAplicador = {};
+        let temDuplicado = false;
+        let mensagemErro = '';
+        
+        desmontados.forEach(v => {
+            const seqInput = document.getElementById(`seq_${v.id}`);
+            const appSelect = document.getElementById(`app_${v.id}`);
+            
+            if (seqInput && appSelect) {
+                const rota = parseInt(seqInput.value);
+                const aplicador = appSelect.value;
+                
+                if (!rotasPorAplicador[aplicador]) {
+                    rotasPorAplicador[aplicador] = [];
+                }
+                
+                // Verificar se já existe esse número para esse aplicador
+                if (rotasPorAplicador[aplicador].includes(rota)) {
+                    temDuplicado = true;
+                    mensagemErro = `❌ Erro: O aplicador ${aplicador} tem o número ${rota} repetido!\n\nCada aplicador deve ter números únicos na sua rota.`;
+                }
+                
+                rotasPorAplicador[aplicador].push(rota);
+            }
+        });
+        
+        if (temDuplicado) {
+            alert(mensagemErro);
+            return;
+        }
+        
+        // Se passou na validação, salvar
         let saved = 0;
         desmontados.forEach(v => {
             const seqInput = document.getElementById(`seq_${v.id}`);
@@ -1549,9 +1814,144 @@ class SequenciaManager {
         DB.saveVehicles(vehicles);
         Dashboard.renderDashboard();
         
-        alert(`✅ Sequência salva com sucesso! ${saved} veículo(s) atualizado(s).`);
+        alert(`✅ Rota de Aplicação salva com sucesso! ${saved} veículo(s) atualizado(s).`);
         
-        this.loadSequencia(); // Recarregar lista
+        this.loadRota(); // Recarregar lista
+    }
+}
+
+// Gerenciador de Rota de Montagem
+class RotaMontagemManager {
+    static loadRota() {
+        const vehicles = DB.getVehicles();
+        const aplicados = vehicles.filter(v => v.status === 'aplicado');
+        const team = DB.getTeam();
+        
+        const list = document.getElementById('rotaMontagemList');
+        
+        if (aplicados.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo aplicado aguardando montagem!</p></div>';
+            return;
+        }
+        
+        // Ordenar por rotaMontagem (se já tiver) ou por data de aplicação
+        aplicados.sort((a, b) => {
+            if (a.rotaMontagem && b.rotaMontagem) {
+                return a.rotaMontagem - b.rotaMontagem;
+            }
+            if (a.rotaMontagem) return -1;
+            if (b.rotaMontagem) return 1;
+            return 0;
+        });
+        
+        // Calcular sugestão de número por montador (1, 2, 3... para cada montador)
+        const contadorPorMontador = {};
+        
+        list.innerHTML = aplicados.map((v) => {
+            const montadorAtual = v.montador || team.montadores[0];
+            
+            // Se não tem rota definida, sugerir próximo número desse montador
+            let rotaSugerida = v.rotaMontagem;
+            if (!rotaSugerida) {
+                if (!contadorPorMontador[montadorAtual]) {
+                    contadorPorMontador[montadorAtual] = 1;
+                }
+                rotaSugerida = contadorPorMontador[montadorAtual];
+                contadorPorMontador[montadorAtual]++;
+            }
+            
+            return `
+            <div class="rota-card" style="background: white; padding: 20px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #eab308;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 16px; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0;">${v.modelo}</h3>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Chassi:</strong> ${v.chassi}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Concessionária:</strong> ${v.concessionaria}</p>
+                        <p style="margin: 4px 0; color: #64748b; font-size: 0.9rem;"><strong>Local:</strong> ${v.local || '-'}</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #eab308;">Rota</label>
+                        <input 
+                            type="number" 
+                            id="rotaMont_${v.id}" 
+                            value="${rotaSugerida}" 
+                            min="1" 
+                            style="width: 80px; padding: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; border: 2px solid #eab308; border-radius: 6px;"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #eab308;">Montador</label>
+                        <select 
+                            id="montMont_${v.id}" 
+                            style="width: 100%; padding: 10px; font-size: 1rem; border: 2px solid #eab308; border-radius: 6px;"
+                        >
+                            ${team.montadores.map(name => 
+                                `<option value="${name}" ${montadorAtual === name ? 'selected' : ''}>${name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+    }
+    
+    static saveRota() {
+        const vehicles = DB.getVehicles();
+        const aplicados = vehicles.filter(v => v.status === 'aplicado');
+        
+        // VALIDAR: verificar números duplicados por montador
+        const rotasPorMontador = {};
+        let temDuplicado = false;
+        let mensagemErro = '';
+        
+        aplicados.forEach(v => {
+            const rotaInput = document.getElementById(`rotaMont_${v.id}`);
+            const montSelect = document.getElementById(`montMont_${v.id}`);
+            
+            if (rotaInput && montSelect) {
+                const rota = parseInt(rotaInput.value);
+                const montador = montSelect.value;
+                
+                if (!rotasPorMontador[montador]) {
+                    rotasPorMontador[montador] = [];
+                }
+                
+                // Verificar se já existe esse número para esse montador
+                if (rotasPorMontador[montador].includes(rota)) {
+                    temDuplicado = true;
+                    mensagemErro = `❌ Erro: O montador ${montador} tem o número ${rota} repetido!\n\nCada montador deve ter números únicos na sua rota.`;
+                }
+                
+                rotasPorMontador[montador].push(rota);
+            }
+        });
+        
+        if (temDuplicado) {
+            alert(mensagemErro);
+            return;
+        }
+        
+        // Se passou na validação, salvar
+        let saved = 0;
+        aplicados.forEach(v => {
+            const rotaInput = document.getElementById(`rotaMont_${v.id}`);
+            const montSelect = document.getElementById(`montMont_${v.id}`);
+            
+            if (rotaInput && montSelect) {
+                v.rotaMontagem = parseInt(rotaInput.value);
+                v.montador = montSelect.value;
+                saved++;
+            }
+        });
+        
+        DB.saveVehicles(vehicles);
+        Dashboard.renderDashboard();
+        
+        alert(`✅ Rota de Montagem salva com sucesso! ${saved} veículo(s) atualizado(s).`);
+        
+        this.loadRota();
     }
 }
 
