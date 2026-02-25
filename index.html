@@ -438,6 +438,77 @@
                 </form>
             </div>
         </div>
+        
+        <!-- Modal: Editar Veículo -->
+        <div id="vehicleEditModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>✏️ Editar Veículo</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="vehicleEditForm">
+                    <input type="hidden" id="editVehicleId">
+                    
+                    <div class="form-group">
+                        <label>Concessionária *</label>
+                        <input type="text" id="editConcessionaria" list="editConcessionariasList" required>
+                        <datalist id="editConcessionariasList"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Local</label>
+                        <input type="text" id="editLocal" list="editLocaisList">
+                        <datalist id="editLocaisList"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Número do Chassi *</label>
+                        <input type="text" id="editChassi" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modelo do Veículo *</label>
+                        <input type="text" id="editModelo" list="editModelosList" required>
+                        <datalist id="editModelosList"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea id="editObservacoes" rows="3" placeholder="Detalhes importantes sobre este veículo..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Prioridade (1 = mais urgente)</label>
+                        <input type="number" id="editPrioridade" min="0" placeholder="Ex: 1, 2, 3... (deixe vazio se não tem prioridade)">
+                        <small style="color: #64748b;">Carros com prioridade aparecem primeiro para aplicadores</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Observações de Urgência</label>
+                        <textarea id="editObsUrgencia" rows="2" placeholder="Ex: Cliente VIP, entrega hoje às 17h..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aplicador</label>
+                        <select id="editAplicador">
+                            <option value="">A definir</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Montador</label>
+                        <select id="editMontador">
+                            <option value="">A definir</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>
