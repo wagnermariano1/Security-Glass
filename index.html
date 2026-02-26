@@ -9,6 +9,30 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5SaxfpAPzbb3E8gSdBoWif5-0zVg77cw",
+            authDomain: "security-glass-controle.firebaseapp.com",
+            projectId: "security-glass-controle",
+            storageBucket: "security-glass-controle.firebasestorage.app",
+            messagingSenderId: "195223864994",
+            appId: "1:195223864994:web:8226b616d49f5abe28f9fb"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebase = { app, db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+    </script>
 </head>
 <body>
     <div id="app">

@@ -1,17 +1,145 @@
-// Security Glass App - Main JavaScript v4.7
+// Security Glass App - Main JavaScript v9.0 - Firebase Integration
 // Novo fluxo: Cadastrado → Desmontado → Aplicado → Montado
 
-console.log('🔧 Security Glass v4.7 - Automação 18h corrigida + Botões OK');
+console.log('🔥 Security Glass v9.0 - Firebase Integration!');
 
+// Firebase Database Layer
+const FirebaseDB = {
+    initialized: false,
+    
+    async init() {
+        if (this.initialized) return;
+        
+        // Aguardar Firebase estar disponível
+        let attempts = 0;
+        while (!window.firebase && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!window.firebase) {
+            console.error('Firebase não carregou! Usando localStorage como fallback.');
+            return;
+        }
+        
+        this.initialized = true;
+        console.log('✅ Firebase inicializado!');
+        
+        // Sincronizar dados do localStorage para Firebase (primeira vez)
+        await this.syncLocalToFirebase();
+        
+        // Configurar listeners em tempo real
+        this.setupRealtimeListeners();
+    },
+    
+    async syncLocalToFirebase() {
+        try {
+            // Migrar veículos
+            const localVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+            if (localVehicles.length > 0) {
+                console.log(`📦 Migrando ${localVehicles.length} veículos para Firebase...`);
+                for (const vehicle of localVehicles) {
+                    await this.saveVehicle(vehicle);
+                }
+            }
+            
+            // Migrar equipe
+            const localTeam = JSON.parse(localStorage.getItem('team') || 'null');
+            if (localTeam) {
+                await this.saveTeam(localTeam);
+            }
+            
+            console.log('✅ Dados migrados para Firebase!');
+        } catch (error) {
+            console.error('Erro ao migrar dados:', error);
+        }
+    },
+    
+    setupRealtimeListeners() {
+        const { db, collection, onSnapshot } = window.firebase;
+        
+        // Listener de veículos
+        onSnapshot(collection(db, 'vehicles'), (snapshot) => {
+            const vehicles = [];
+            snapshot.forEach(doc => {
+                vehicles.push({ id: doc.id, ...doc.data() });
+            });
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+            
+            // Atualizar dashboard se estiver visível
+            if (document.getElementById('dashboardScreen').classList.contains('active')) {
+                Dashboard.renderDashboard();
+            }
+        });
+        
+        console.log('🔄 Sincronização em tempo real ativada!');
+    },
+    
+    async saveVehicle(vehicle) {
+        if (!this.initialized || !window.firebase) {
+            return DB.saveVehicles([...DB.getVehicles().filter(v => v.id !== vehicle.id), vehicle]);
+        }
+        
+        try {
+            const { db, doc, setDoc } = window.firebase;
+            await setDoc(doc(db, 'vehicles', vehicle.id), vehicle);
+        } catch (error) {
+            console.error('Erro ao salvar veículo:', error);
+            // Fallback para localStorage
+            DB.saveVehicles([...DB.getVehicles().filter(v => v.id !== vehicle.id), vehicle]);
+        }
+    },
+    
+    async deleteVehicle(vehicleId) {
+        if (!this.initialized || !window.firebase) {
+            return DB.saveVehicles(DB.getVehicles().filter(v => v.id !== vehicleId));
+        }
+        
+        try {
+            const { db, doc, deleteDoc } = window.firebase;
+            await deleteDoc(doc(db, 'vehicles', vehicleId));
+        } catch (error) {
+            console.error('Erro ao deletar veículo:', error);
+            DB.saveVehicles(DB.getVehicles().filter(v => v.id !== vehicleId));
+        }
+    },
+    
+    async saveTeam(team) {
+        if (!this.initialized || !window.firebase) {
+            return DB.saveTeam(team);
+        }
+        
+        try {
+            const { db, doc, setDoc } = window.firebase;
+            await setDoc(doc(db, 'config', 'team'), team);
+        } catch (error) {
+            console.error('Erro ao salvar equipe:', error);
+            DB.saveTeam(team);
+        }
+    }
+};
+
+// Classe DB original (fallback localStorage)
 const DB = {
     getVehicles: () => JSON.parse(localStorage.getItem('vehicles') || '[]'),
-    saveVehicles: (vehicles) => localStorage.setItem('vehicles', JSON.stringify(vehicles)),
+    saveVehicles: (vehicles) => {
+        localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        // Sincronizar cada veículo com Firebase
+        if (FirebaseDB.initialized) {
+            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+        }
+    },
     
     getTeam: () => JSON.parse(localStorage.getItem('team') || JSON.stringify({
         aplicadores: ['Jonas', 'Maycon'],
         montadores: ['Rafael', 'Vinicius', 'Arthur', 'Claiton']
     })),
-    saveTeam: (team) => localStorage.setItem('team', JSON.stringify(team)),
+    saveTeam: (team) => {
+        localStorage.setItem('team', JSON.stringify(team));
+        if (FirebaseDB.initialized) {
+            FirebaseDB.saveTeam(team);
+        }
+    },
     
     getConcessionarias: () => JSON.parse(localStorage.getItem('concessionarias') || '[]'),
     saveConcessionarias: (list) => localStorage.setItem('concessionarias', JSON.stringify(list)),
@@ -2512,3 +2640,10 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('Erro ao registrar Service Worker:', err));
     });
 }
+
+// Inicializar Firebase ao carregar página
+window.addEventListener('DOMContentLoaded', async () => {
+    console.log('🔥 Inicializando Firebase...');
+    await FirebaseDB.init();
+    console.log('✅ App pronto com Firebase!');
+});
