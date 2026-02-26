@@ -227,6 +227,61 @@ class Dashboard {
         this.renderDashboard();
         this.setupEventListeners();
         this.startAutoRefresh();
+        this.checkManagementButton();
+    }
+    
+    static checkManagementButton() {
+        const role = APP_STATE.currentRole;
+        const user = APP_STATE.currentUser;
+        const btn = document.getElementById('enableManagementBtn');
+        
+        // Mostrar botão apenas para Wagner (gestor)
+        if (user === 'wagner' && role === 'gestor') {
+            btn.style.display = 'inline-block';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+    
+    static enableManagementMode() {
+        if (confirm('🔑 Ativar Modo Gestão?\n\nVocê terá acesso total ao sistema (igual ao Vinicius).\n\nIsso deve ser usado apenas quando Vinicius estiver ausente.')) {
+            // Mudar role para manager PERMANENTEMENTE na sessão
+            APP_STATE.currentRole = 'manager';
+            APP_STATE.currentUser = 'vinicius'; // Importante para permissões
+            APP_STATE.currentUserFullName = 'Wagner (Gestão)';
+            
+            // Salvar no sessionStorage para persistir na sessão
+            sessionStorage.setItem('currentRole', 'manager');
+            sessionStorage.setItem('currentUser', 'vinicius');
+            sessionStorage.setItem('currentUserFullName', 'Wagner (Gestão)');
+            
+            // IMPORTANTE: Trocar classe do body de 'gestor' para 'manager'
+            document.body.classList.remove('gestor');
+            document.body.classList.add('manager');
+            
+            // Esconder botão
+            document.getElementById('enableManagementBtn').style.display = 'none';
+            
+            // Atualizar display do nome
+            document.getElementById('userNameDisplay').textContent = 'Wagner (Gestão Ativa) 🔑';
+            
+            // Mostrar abas de manager
+            document.querySelectorAll('.manager-only').forEach(el => {
+                el.style.display = 'block';
+            });
+            
+            // Mostrar botão de cadastro
+            const newVehicleBtn = document.getElementById('newVehicleBtn');
+            if (newVehicleBtn) {
+                newVehicleBtn.style.display = 'block';
+            }
+            
+            // Re-renderizar tudo
+            this.renderDashboard();
+            Dashboard.loadTeamMembers();
+            
+            alert('✅ Modo Gestão ATIVADO!\n\nVocê agora tem acesso completo ao sistema.');
+        }
     }
 
     static setupTabs() {
@@ -424,9 +479,11 @@ class Dashboard {
                 return 0;
             });
             
-            // FILTRAR FINALIZADOS: só vê que ELE desmontou OU montou
+            // FILTRAR FINALIZADOS: vê que ELE desmontou, aplicou OU montou
             finalizados = finalizados.filter(v => 
-                v.desmontadoPor === currentUserName || v.montadoPor === currentUserName
+                v.desmontadoPor === currentUserName || 
+                v.aplicadoPor === currentUserName ||
+                v.montadoPor === currentUserName
             );
             
             // Não vê desmontados (são para aplicadores)
@@ -476,8 +533,12 @@ class Dashboard {
                 return 0;
             });
             
-            // FILTRAR FINALIZADOS: só vê que ELE aplicou
-            finalizados = finalizados.filter(v => v.aplicadoPor === currentUserName);
+            // FILTRAR FINALIZADOS: vê que ELE desmontou, aplicou OU montou
+            finalizados = finalizados.filter(v => 
+                v.desmontadoPor === currentUserName || 
+                v.aplicadoPor === currentUserName ||
+                v.montadoPor === currentUserName
+            );
             
             // Mostrar filtro de local
             this.setupLocalFilter(desmontados);
@@ -797,10 +858,10 @@ class VehicleForm {
     }
 
     static submitForm() {
-        const concessionaria = document.getElementById('concessionaria').value.trim();
-        const local = document.getElementById('local').value.trim();
+        const concessionaria = document.getElementById('concessionaria').value.trim().toUpperCase();
+        const local = document.getElementById('local').value.trim().toUpperCase();
         const chassi = document.getElementById('chassi').value.trim();
-        const modelo = document.getElementById('modelo').value.trim();
+        const modelo = document.getElementById('modelo').value.trim().toUpperCase();
         const observacoes = document.getElementById('observacoes').value.trim();
         const prioridade = document.getElementById('prioridade').value.trim();
         const obsUrgencia = document.getElementById('obsUrgencia').value.trim();
@@ -1658,20 +1719,26 @@ class ReportsManager {
         // BOM para Excel reconhecer UTF-8 corretamente
         // Usar PONTO-E-VÍRGULA (;) que é o padrão do Excel brasileiro
         let csv = '\uFEFF';
-        csv += 'Concessionária;Local;Modelo;Mês;Desmontador;Aplicador;Montador;OBS Montagem\n';
+        csv += 'ID;GRUPO;LOJA;CARRO;MÊS;CHASSI;Desmontador;Aplicador;Montador;OBS\n';
         
-        finalizados.forEach(v => {
-            const concessionaria = v.concessionaria || '-';
-            const local = v.local || '-';
-            const modelo = v.modelo || '-';
-            const mes = Utils.getCurrentMonth(); // Mês atual (ex: "2026-02")
+        finalizados.forEach((v, index) => {
+            const id = index + 1; // ID numérico (1, 2, 3...)
+            const grupo = v.concessionaria || '-';
+            const loja = v.local || '-';
+            const carro = v.modelo || '-';
+            const mes = Utils.getCurrentMonth(); // Mês atual (ex: "JANEIRO" ou "2026-02")
+            
+            // IMPORTANTE: Forçar chassi como TEXTO para Excel não converter pra notação científica
+            // Usar ="chassi" força Excel a tratar como texto
+            const chassi = v.chassi ? `="${v.chassi}"` : '-';
+            
             const desmontador = v.desmontadoPor || '-';
             const aplicador = v.aplicadoPor || v.aplicador || '-';
             const montador = v.montadoPor || v.montador || '-';
-            const obsMontagemDesmontagem = (v.obsDesmontar || '-').replace(/;/g, ','); // OBS da desmontagem (avarias)
+            const obs = (v.obsDesmontar || '-').replace(/;/g, ','); // OBS da desmontagem (avarias)
             
-            // Nova ordem: Concessionária, Local, Modelo, Mês, Desmontador, Aplicador, Montador, OBS
-            csv += `${concessionaria};${local};${modelo};${mes};${desmontador};${aplicador};${montador};${obsMontagemDesmontagem}\n`;
+            // Ordem igual matriz: ID, GRUPO, LOJA, CARRO, MÊS, CHASSI, Desmontador, Aplicador, Montador, OBS
+            csv += `${id};${grupo};${loja};${carro};${mes};${chassi};${desmontador};${aplicador};${montador};${obs}\n`;
         });
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1757,7 +1824,7 @@ document.addEventListener('DOMContentLoaded', () => {
 class RotaDesmontagemManager {
     static loadRota() {
         const vehicles = DB.getVehicles();
-        const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
+        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
         const team = DB.getTeam();
         
         const list = document.getElementById('rotaDesmontagemList');
@@ -1837,7 +1904,7 @@ class RotaDesmontagemManager {
     
     static recalcularRota(vehicleId) {
         const vehicles = DB.getVehicles();
-        const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
+        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
         
         // Pegar montador selecionado NO DOM
         const montadorSelect = document.getElementById(`montDesm_${vehicleId}`);
@@ -2160,7 +2227,10 @@ class RotaMontagemManager {
         list.innerHTML = aplicados.map((v) => {
             // Se JÁ tem rota salva, mostrar. Senão, deixar vazio.
             const rotaValue = v.rotaMontagem || '';
-            const montadorValue = v.montador || '';
+            
+            // IMPORTANTE: Na Rota Montagem, só pré-selecionar montador se JÁ FOI SALVO
+            // Se não, deixar vazio para Vinicius escolher (pode ser diferente da desmontagem)
+            const montadorValue = v.rotaMontagem ? (v.montador || '') : '';
             
             return `
             <div class="rota-card" style="background: white; padding: 20px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #eab308;">
@@ -2202,15 +2272,8 @@ class RotaMontagemManager {
             </div>
         `}).join('');
         
-        // CALCULAR números automaticamente para carros que JÁ TEM montador
-        setTimeout(() => {
-            aplicados.forEach(v => {
-                if (v.montador && !v.rotaMontagem) {
-                    // Tem montador mas não tem rota → calcular
-                    this.recalcularRota(v.id);
-                }
-            });
-        }, 100);
+        // Na Rota Montagem NÃO calcular automaticamente
+        // Vinicius sempre escolhe manual (pode ser diferente da desmontagem)
     }
     
     static recalcularRota(vehicleId) {
@@ -2428,6 +2491,10 @@ class EsperaManager {
         delete vehicle.motivoEspera;
         delete vehicle.dataEspera;
         delete vehicle.tentouDesmontarPor;
+        
+        // IMPORTANTE: Limpar montador e rota para Vinicius definir novamente
+        delete vehicle.montador;
+        delete vehicle.rotaDesmontagem;
         
         DB.saveVehicles(vehicles);
         this.loadEspera();
