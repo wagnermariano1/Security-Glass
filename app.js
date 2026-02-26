@@ -58,7 +58,7 @@ const FirebaseDB = {
     setupRealtimeListeners() {
         const { db, collection, onSnapshot } = window.firebase;
         
-        // Listener de veículos
+        // Listener de veículos com atualização completa
         onSnapshot(collection(db, 'vehicles'), (snapshot) => {
             const vehicles = [];
             snapshot.forEach(doc => {
@@ -66,9 +66,42 @@ const FirebaseDB = {
             });
             localStorage.setItem('vehicles', JSON.stringify(vehicles));
             
-            // Atualizar dashboard se estiver visível
+            console.log('🔄 Dados sincronizados do Firebase!');
+            
+            // Atualizar TODAS as telas que podem estar visíveis
             if (document.getElementById('dashboardScreen').classList.contains('active')) {
-                Dashboard.renderDashboard();
+                const currentTab = document.querySelector('.tab.active')?.dataset?.tab;
+                
+                // Atualizar dashboard principal
+                if (currentTab === 'dashboard') {
+                    Dashboard.renderDashboard();
+                }
+                
+                // Atualizar aba de veículos
+                if (currentTab === 'vehicles') {
+                    VehiclesManager.renderList();
+                }
+                
+                // Atualizar rotas se estiver aberta
+                if (currentTab === 'rotaDesmontagem') {
+                    RotaDesmontagemManager.loadRota();
+                }
+                if (currentTab === 'rotaAplicacao') {
+                    RotaAplicacaoManager.loadRota();
+                }
+                if (currentTab === 'rotaMontagem') {
+                    RotaMontagemManager.loadRota();
+                }
+                
+                // Atualizar espera
+                if (currentTab === 'espera') {
+                    EsperaManager.loadEspera();
+                }
+                
+                // Atualizar relatórios
+                if (currentTab === 'reports') {
+                    ReportsManager.loadReport();
+                }
             }
         });
         
@@ -190,6 +223,28 @@ const Utils = {
         const d = new Date(date);
         const now = new Date();
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    },
+    
+    openPhotoModal: (photoUrl) => {
+        // Criar modal para exibir foto
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+        
+        modal.innerHTML = `
+            <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column;">
+                <button onclick="this.closest('div').parentElement.remove()" style="position: absolute; top: -40px; right: 0; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 24px; color: #000;">×</button>
+                <img src="${photoUrl}" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;">
+            </div>
+        `;
+        
+        // Fechar ao clicar fora da imagem
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        document.body.appendChild(modal);
     }
 };
 
@@ -212,6 +267,7 @@ class AuthSystem {
     static login() {
         const userSelect = document.getElementById('userSelect');
         const passwordInput = document.getElementById('passwordInput');
+        const rememberMe = document.getElementById('rememberMe');
         const username = userSelect.value;
         const password = passwordInput.value;
         
@@ -244,6 +300,18 @@ class AuthSystem {
         localStorage.setItem('currentUser', username);
         localStorage.setItem('currentRole', role);
         localStorage.setItem('currentUserFullName', fullName);
+        
+        // Lembrar de mim - salva por 30 dias
+        if (rememberMe.checked) {
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            localStorage.setItem('rememberMe', 'true');
+            localStorage.setItem('rememberMeExpiry', expiryDate.toISOString());
+            console.log('✅ Lembrar de mim ativado por 30 dias');
+        } else {
+            localStorage.removeItem('rememberMe');
+            localStorage.removeItem('rememberMeExpiry');
+        }
 
         this.showDashboard();
     }
@@ -255,12 +323,15 @@ class AuthSystem {
         localStorage.removeItem('currentUser');
         localStorage.removeItem('currentRole');
         localStorage.removeItem('currentUserFullName');
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('rememberMeExpiry');
         
         document.getElementById('dashboardScreen').classList.remove('active');
         document.getElementById('loginScreen').classList.add('active');
         document.body.classList.remove('gestor', 'manager', 'aplicador', 'montador');
         
         document.getElementById('passwordInput').value = '';
+        document.getElementById('rememberMe').checked = false;
     }
 
     static showDashboard() {
@@ -278,8 +349,40 @@ class AuthSystem {
         const user = localStorage.getItem('currentUser');
         const role = localStorage.getItem('currentRole');
         const fullName = localStorage.getItem('currentUserFullName');
+        const rememberMe = localStorage.getItem('rememberMe');
+        const rememberMeExpiry = localStorage.getItem('rememberMeExpiry');
+        
+        // Verificar se "Lembrar de mim" ainda é válido
+        if (rememberMe === 'true' && rememberMeExpiry) {
+            const expiryDate = new Date(rememberMeExpiry);
+            const now = new Date();
+            
+            if (now > expiryDate) {
+                // Expirou - fazer logout
+                console.log('⏰ Lembrar de mim expirou (30 dias)');
+                localStorage.removeItem('rememberMe');
+                localStorage.removeItem('rememberMeExpiry');
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('currentRole');
+                localStorage.removeItem('currentUserFullName');
+                return;
+            }
+        }
         
         if (user && role && fullName) {
+            // Se NÃO marcou "Lembrar de mim", só mantém durante a sessão
+            if (rememberMe !== 'true') {
+                // Verifica se é uma nova sessão (página foi fechada e reaberta)
+                const sessionId = sessionStorage.getItem('sessionId');
+                if (!sessionId) {
+                    // Nova sessão - fazer logout
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('currentRole');
+                    localStorage.removeItem('currentUserFullName');
+                    return;
+                }
+            }
+            
             APP_STATE.currentUser = user;
             APP_STATE.currentRole = role;
             APP_STATE.currentUserFullName = fullName;
@@ -288,6 +391,11 @@ class AuthSystem {
             userSelect.value = user;
             
             this.showDashboard();
+        }
+        
+        // Criar ID de sessão se não existir
+        if (!sessionStorage.getItem('sessionId')) {
+            sessionStorage.setItem('sessionId', Date.now().toString());
         }
     }
     
@@ -1468,7 +1576,7 @@ class VehicleDetailModal {
                                 <p style="margin-top: 12px;"><strong>📷 Fotos da Montagem (${vehicle.montagemFotos.length}):</strong></p>
                                 <div class="photo-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px;">
                                     ${vehicle.montagemFotos.map(photo => `
-                                        <img src="${photo}" alt="Foto da montagem" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="window.open('${photo}', '_blank')">
+                                        <img src="${photo}" alt="Foto da montagem" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="Utils.openPhotoModal('${photo}')">
                                     `).join('')}
                                 </div>
                             ` : '<p style="margin-top: 8px; color: #f97316;">⚠️ Nenhuma foto anexada</p>'}
