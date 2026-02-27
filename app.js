@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v9.0 - Firebase Integration
+// Security Glass App - Main JavaScript v12.0 - Auto-Limpeza Inteligente
 // Novo fluxo: Cadastrado → Desmontado → Aplicado → Montado
 
-console.log('🔥 Security Glass v9.0 - Firebase Integration!');
+console.log('🔥 Security Glass v12.0 - Auto-Limpeza Inteligente!');
 
 // Firebase Database Layer
 const FirebaseDB = {
