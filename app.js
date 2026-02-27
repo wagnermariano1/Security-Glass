@@ -449,8 +449,8 @@ class AuthSystem {
         const logoutBtn = document.getElementById('logoutBtn');
         logoutBtn.addEventListener('click', () => this.logout());
         
-        const limparCacheBtn = document.getElementById('limparCacheBtn');
-        limparCacheBtn.addEventListener('click', () => this.limparCache());
+        const limparCacheLoginBtn = document.getElementById('limparCacheLoginBtn');
+        limparCacheLoginBtn.addEventListener('click', () => this.limparCache());
         
         const changePasswordBtn = document.getElementById('changePasswordBtn');
         changePasswordBtn.addEventListener('click', () => this.showChangePasswordModal());
@@ -533,12 +533,12 @@ class AuthSystem {
     }
     
     static limparCache() {
-        const confirma = confirm('🧹 LIMPAR CACHE E DADOS ANTIGOS?\n\nIsso vai:\n✅ Limpar dados locais antigos\n✅ Sincronizar com a nuvem\n✅ Resolver problemas de carros "fantasmas"\n\nVocê será deslogado e precisará fazer login novamente.\n\nConfirma?');
+        const confirma = confirm('🧹 LIMPAR CACHE E DADOS ANTIGOS?\n\nIsso vai:\n✅ Limpar dados locais antigos\n✅ Resolver problemas de carros "fantasmas"\n✅ Sincronizar corretamente com a nuvem\n\nA página será recarregada.\n\nConfirma?');
         
         if (!confirma) return;
         
         try {
-            console.log('🧹 Limpando cache do usuário...');
+            console.log('🧹 Limpando cache...');
             
             // Limpa TUDO do localStorage (exceto credenciais de equipe)
             const team = localStorage.getItem('team');
@@ -550,12 +550,15 @@ class AuthSystem {
             if (team) localStorage.setItem('team', team);
             if (config) localStorage.setItem('config', config);
             
+            // Marca que foi limpo manualmente (para evitar migração)
+            localStorage.setItem('firebase_migrated', 'true');
+            
             console.log('✅ Cache limpo com sucesso!');
             
             // Mostra mensagem de sucesso
-            alert('✅ Cache limpo com sucesso!\n\nVocê será redirecionado para a tela de login.');
+            alert('✅ Cache limpo com sucesso!\n\nAgora você pode fazer login normalmente.');
             
-            // Recarrega página (volta pro login)
+            // Recarrega página
             window.location.reload();
             
         } catch (error) {
