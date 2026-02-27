@@ -1,4 +1,4 @@
-const CACHE_NAME = 'security-glass-v2';
+const CACHE_NAME = 'security-glass-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -93,6 +93,17 @@ self.addEventListener('activate', event => {
 
 // Interceptar requisições
 self.addEventListener('fetch', event => {
+  // NÃO interceptar requisições Firebase/API externas
+  if (event.request.url.includes('firebasestorage.googleapis.com') ||
+      event.request.url.includes('firestore.googleapis.com') ||
+      event.request.url.includes('cloudfunctions.net') ||
+      event.request.url.includes('identitytoolkit.googleapis.com') ||
+      event.request.url.includes('securetoken.googleapis.com') ||
+      event.request.url.includes('firebase.googleapis.com')) {
+    // Deixa passar direto sem cache
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(response => {
