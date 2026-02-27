@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Rápido - Security Glass</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #dc2626;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dc2626;
+        }
+        .section h3 {
+            color: #374151;
+            margin: 20px 0 10px;
+        }
+        .step {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc2626;
+        }
+        .step strong {
+            color: #dc2626;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .feature {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .feature .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .role {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .role.gerente { background: #fef3c7; border-left-color: #eab308; }
+        .role.aplicador { background: #dbeafe; border-left-color: #3b82f6; }
+        .role.montador { background: #f0fdf4; border-left-color: #16a34a; }
+        .alert {
+            background: #fef3c7;
+            border: 1px solid #eab308;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .alert strong { color: #92400e; }
+        .btn {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        .btn:hover { background: #b91c1c; }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        ul { margin-left: 20px; margin-top: 10px; }
+        ul li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Security Glass</h1>
+        <p>Guia Rápido do Sistema de Controle</p>
+    </div>
+
+    <div class="section">
+        <h2>📱 Como Instalar no Android</h2>
+        
+        <h3>Método Recomendado: Usando Netlify (Grátis)</h3>
+        <div class="step">
+            <strong>Passo 1:</strong>
+            Acesse <a href="https://www.netlify.com" target="_blank">netlify.com</a> e crie uma conta grátis
+        </div>
+        <div class="step">
+            <strong>Passo 2:</strong>
+            Clique em "Add new site" → "Deploy manually"
+        </div>
+        <div class="step">
+            <strong>Passo 3:</strong>
+            Arraste a pasta <code>security-glass-app</code> para a área de upload
+        </div>
+        <div class="step">
+            <strong>Passo 4:</strong>
+            Aguarde o deploy finalizar e copie a URL gerada (ex: <code>https://seu-site.netlify.app</code>)
+        </div>
+        <div class="step">
+            <strong>Passo 5 - No celular Android:</strong>
+            <ul>
+                <li>Abra o Chrome</li>
+                <li>Acesse a URL do Netlify</li>
+                <li>Toque no menu (⋮) → "Adicionar à tela inicial"</li>
+                <li>Pronto! O app estará disponível como ícone</li>
+            </ul>
+        </div>
+
+        <h3>Método Alternativo: Servidor Local</h3>
+        <div class="step">
+            <strong>Windows:</strong>
+            Execute o arquivo <code>start-server.bat</code>
+        </div>
+        <div class="step">
+            <strong>Mac/Linux:</strong>
+            Execute <code>bash start-server.sh</code> no terminal
+        </div>
+        <div class="step">
+            <strong>No celular:</strong>
+            Acesse <code>http://IP_DO_COMPUTADOR:8080</code>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>👥 Tipos de Usuário</h2>
+        
+        <div class="role gerente">
+            <h3>🔑 Gerente (Vinicius)</h3>
+            <p><strong>Acesso total ao sistema:</strong></p>
+            <ul>
+                <li>Cadastrar novos veículos</li>
+                <li>Visualizar todos os status</li>
+                <li>Atribuir aplicadores e montadores</li>
+                <li>Gerar relatórios mensais</li>
+                <li>Gerenciar equipe</li>
+                <li>Exportar dados</li>
+            </ul>
+        </div>
+
+        <div class="role aplicador">
+            <h3>🛡️ Aplicadores (Jonas, Maycon)</h3>
+            <p><strong>Responsável pela aplicação da película:</strong></p>
+            <ul>
+                <li>Ver veículos aguardando aplicação</li>
+                <li>Marcar como "Aplicado" com horário automático</li>
+                <li>Visualizar histórico próprio</li>
+            </ul>
+        </div>
+
+        <div class="role montador">
+            <h3>🔧 Montadores (Rafael, Arthur, Claiton, Vinicius)</h3>
+            <p><strong>Responsável pela montagem dos vidros:</strong></p>
+            <ul>
+                <li>Ver veículos aguardando montagem</li>
+                <li>Marcar como "Montado" com data</li>
+                <li>Adicionar fotos da montagem</li>
+                <li>Visualizar histórico próprio</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔄 Fluxo de Trabalho</h2>
+        
+        <div class="feature-grid">
+            <div class="feature">
+                <div class="icon">📝</div>
+                <h3>1. Cadastro</h3>
+                <p>Gerente cadastra o veículo no sistema</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🚗</div>
+                <h3>2. Retirada</h3>
+                <p>Vidros retirados na concessionária</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🛡️</div>
+                <h3>3. Aplicação</h3>
+                <p>Aplicador instala a película</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🔧</div>
+                <h3>4. Montagem</h3>
+                <p>Montador reinstala os vidros</p>
+            </div>
+            <div class="feature">
+                <div class="icon">✅</div>
+                <h3>5. Finalizado</h3>
+                <p>Veículo pronto para entrega</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📋 Como Usar - Passo a Passo</h2>
+        
+        <h3>Para o Gerente: Cadastrar Veículo</h3>
+        <div class="step">
+            <strong>1.</strong> Faça login como "Vinicius (Gerente)"
+        </div>
+        <div class="step">
+            <strong>2.</strong> Clique em "+ Novo Veículo"
+        </div>
+        <div class="step">
+            <strong>3.</strong> Preencha os dados:
+            <ul>
+                <li><strong>Concessionária:</strong> Ex: Nissan, Honda, BYD</li>
+                <li><strong>Local:</strong> Ex: RioRio C.I.O</li>
+                <li><strong>Chassi:</strong> Número único do veículo</li>
+                <li><strong>Modelo:</strong> Ex: Kicks, Versa, City</li>
+                <li><strong>Aplicador:</strong> Jonas ou Maycon (opcional)</li>
+                <li><strong>Montador:</strong> Rafael, Arthur, etc (opcional)</li>
+            </ul>
+        </div>
+        <div class="step">
+            <strong>4.</strong> Clique em "Cadastrar"
+        </div>
+
+        <div class="alert">
+            <strong>💡 Dica:</strong> Você pode tirar foto do quadro branco e enviar. O sistema tentará extrair os dados automaticamente!
+        </div>
+
+        <h3>Para Aplicadores: Marcar Aplicação</h3>
+        <div class="step">
+            <strong>1.</strong> Faça login como Jonas ou Maycon
+        </div>
+        <div class="step">
+            <strong>2.</strong> Veja os veículos na coluna vermelha "A Aplicar"
+        </div>
+        <div class="step">
+            <strong>3.</strong> Após aplicar a película, clique em "Aplicado"
+        </div>
+        <div class="step">
+            <strong>4.</strong> O sistema registra automaticamente data e hora
+        </div>
+
+        <h3>Para Montadores: Marcar Montagem</h3>
+        <div class="step">
+            <strong>1.</strong> Faça login como Rafael, Arthur, Claiton ou Vinicius
+        </div>
+        <div class="step">
+            <strong>2.</strong> Veja os veículos na coluna amarela "A Montar"
+        </div>
+        <div class="step">
+            <strong>3.</strong> Após montar os vidros, clique em "Montado"
+        </div>
+        <div class="step">
+            <strong>4.</strong> IMPORTANTE: Adicione fotos da montagem finalizada
+        </div>
+        <div class="step">
+            <strong>5.</strong> Confirme a montagem
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Relatórios e Dashboard</h2>
+        
+        <h3>Dashboard Principal</h3>
+        <p>Mostra em tempo real:</p>
+        <ul>
+            <li><strong style="color: #dc2626;">Vermelhos:</strong> Veículos aguardando aplicação</li>
+            <li><strong style="color: #eab308;">Amarelos:</strong> Veículos aguardando montagem</li>
+            <li><strong style="color: #16a34a;">Verdes:</strong> Veículos finalizados no mês</li>
+        </ul>
+
+        <h3>Relatórios Mensais (Apenas Gerente)</h3>
+        <p>Na aba "Relatórios" você encontra:</p>
+        <ul>
+            <li>Total de veículos finalizados no mês</li>
+            <li>Quantidade de aplicações por profissional</li>
+            <li>Quantidade de montagens por profissional</li>
+            <li>Lista detalhada de todos os veículos</li>
+            <li>Botão para exportar em Excel (CSV)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>⚙️ Gerenciar Equipe (Apenas Gerente)</h2>
+        
+        <div class="step">
+            <strong>Adicionar Profissional:</strong>
+            <ul>
+                <li>Vá na aba "Equipe"</li>
+                <li>Clique em "+ Adicionar Aplicador" ou "+ Adicionar Montador"</li>
+                <li>Digite o nome do profissional</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>Remover Profissional:</strong>
+            <ul>
+                <li>Vá na aba "Equipe"</li>
+                <li>Clique no ícone 🗑️ ao lado do nome</li>
+                <li>Confirme a remoção</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>⚠️ Importante Saber</h2>
+        
+        <div class="alert">
+            <strong>📱 Funciona Offline:</strong>
+            Depois de instalado, o app funciona mesmo sem internet!
+        </div>
+
+        <div class="alert">
+            <strong>💾 Dados Locais:</strong>
+            Nesta versão, cada celular guarda seus próprios dados. Para compartilhar entre dispositivos, será necessário implementar um servidor.
+        </div>
+
+        <div class="alert">
+            <strong>🔒 Validação de Duplicidade:</strong>
+            O sistema avisa se você tentar cadastrar um veículo com mesmo chassi, modelo e concessionária.
+        </div>
+
+        <div class="alert">
+            <strong>📸 Fotos da Montagem:</strong>
+            É muito importante tirar fotos ao finalizar a montagem para registro de qualidade.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🆘 Resolução de Problemas</h2>
+        
+        <h3>App não está abrindo:</h3>
+        <ul>
+            <li>Verifique se o Chrome está atualizado</li>
+            <li>Limpe o cache do navegador</li>
+            <li>Reinstale o app</li>
+        </ul>
+
+        <h3>Não consigo ver alguns menus:</h3>
+        <ul>
+            <li>Verifique se fez login com o usuário correto</li>
+            <li>Gerente tem acesso total</li>
+            <li>Aplicadores e Montadores têm acesso limitado</li>
+        </ul>
+
+        <h3>Dados não aparecem em outro celular:</h3>
+        <ul>
+            <li>É normal! Esta versão salva dados localmente</li>
+            <li>Para sincronizar, é necessário implementar servidor</li>
+        </ul>
+    </div>
+
+    <div class="section" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+        <h2 style="color: white; border-bottom-color: white;">🚀 Próximos Passos</h2>
+        <p style="margin-bottom: 15px;">Após testar o sistema localmente, recomendamos:</p>
+        <ul>
+            <li>Hospedar no Netlify para acesso permanente</li>
+            <li>Implementar backend para sincronização entre dispositivos</li>
+            <li>Adicionar OCR real para leitura automática de fotos</li>
+            <li>Integrar com WhatsApp para receber solicitações</li>
+            <li>Adicionar notificações push</li>
+        </ul>
+        <a href="index.html" class="btn" style="background: white; color: #dc2626;">Abrir Sistema →</a>
+    </div>
+
+    <footer style="text-align: center; padding: 20px; color: #6b7280; margin-top: 30px;">
+        <p>Security Glass - Sistema de Controle</p>
+        <p style="font-size: 0.9em; margin-top: 8px;">Desenvolvido para otimizar a gestão de operações</p>
+    </footer>
+</body>
+</html>
