@@ -3097,13 +3097,132 @@ class PushNotifications {
     }
 }
 
-// Service Worker
+// Service Worker com Auto-Atualização Forçada
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker registrado'))
-            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+    window.addEventListener('load', async () => {
+        try {
+            // Registra o Service Worker
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('✅ Service Worker registrado');
+            
+            // Verifica atualizações a cada 60 segundos
+            setInterval(() => {
+                registration.update();
+            }, 60000);
+            
+            // Detecta quando há atualização disponível
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('🔄 Nova versão detectada!');
+                
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // Nova versão disponível!
+                        mostrarMensagemAtualizacao();
+                    }
+                });
+            });
+            
+            // Recarrega quando o SW for ativado
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    console.log('🔄 Recarregando para atualizar...');
+                    window.location.reload();
+                }
+            });
+            
+        } catch (err) {
+            console.log('❌ Erro ao registrar Service Worker:', err);
+        }
     });
+}
+
+// Função para mostrar mensagem de atualização
+function mostrarMensagemAtualizacao() {
+    // Cria overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    overlay.innerHTML = `
+        <div style="
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            margin: 20px;
+        ">
+            <div style="font-size: 48px; margin-bottom: 15px;">⚙️</div>
+            <h3 style="margin: 0 0 10px 0; color: #1e293b;">Nova Versão Disponível!</h3>
+            <p style="color: #64748b; margin-bottom: 20px;">
+                Atualizando sistema automaticamente...
+            </p>
+            <div style="
+                width: 100%;
+                height: 4px;
+                background: #e2e8f0;
+                border-radius: 2px;
+                overflow: hidden;
+            ">
+                <div id="progressBar" style="
+                    width: 0%;
+                    height: 100%;
+                    background: #3b82f6;
+                    transition: width 0.1s linear;
+                "></div>
+            </div>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 15px;">
+                Aguarde 3 segundos...
+            </p>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Anima barra de progresso
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 3.33;
+        document.getElementById('progressBar').style.width = progress + '%';
+        if (progress >= 100) {
+            clearInterval(interval);
+        }
+    }, 100);
+    
+    // Força atualização após 3 segundos
+    setTimeout(() => {
+        // Limpa todos os caches antigos
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    if (name !== 'security-glass-v3') {
+                        caches.delete(name);
+                        console.log('🗑️ Cache antigo removido:', name);
+                    }
+                });
+            });
+        }
+        
+        // Pega o novo SW e ativa
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg && reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+    }, 3000);
 }
 
 // Função para zerar todos os dados (só Wagner)
