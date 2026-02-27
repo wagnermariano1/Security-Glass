@@ -34,44 +34,91 @@ const FirebaseDB = {
     
     async syncLocalToFirebase() {
         try {
-            // Verificar se já migrou antes (evita repopular)
-            const jaMigrou = localStorage.getItem('firebase_migrated');
-            if (jaMigrou === 'true') {
-                console.log('✅ Dados já foram migrados anteriormente. Pulando migração.');
-                return;
-            }
-            
-            // Verificar se há algo no Firebase antes de migrar
             const { db, collection, getDocs } = window.firebase;
             const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
+            const localVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
             
-            // Se Firebase JÁ TEM dados, NÃO migra localStorage!
-            if (!vehiclesSnapshot.empty) {
-                console.log('✅ Firebase já tem dados. Pulando migração do localStorage.');
-                localStorage.setItem('firebase_migrated', 'true');
+            // CENÁRIO 1: Firebase tem dados E localStorage também tem
+            if (!vehiclesSnapshot.empty && localVehicles.length > 0) {
+                console.log('🔄 Firebase e localStorage têm dados. Firebase é a fonte da verdade.');
+                // Firebase sincroniza via listener, localStorage será atualizado automaticamente
                 return;
             }
             
-            // Migrar veículos SOMENTE se Firebase estiver vazio
-            const localVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
-            if (localVehicles.length > 0) {
-                console.log(`📦 Firebase vazio. Migrando ${localVehicles.length} veículos...`);
+            // CENÁRIO 2: Firebase VAZIO mas localStorage TEM dados
+            if (vehiclesSnapshot.empty && localVehicles.length > 0) {
+                // Verificar se é migração inicial legítima OU dados órfãos
+                const jaMigrou = localStorage.getItem('firebase_migrated');
+                
+                if (jaMigrou === 'true') {
+                    // JÁ MIGROU ANTES = São dados ÓRFÃOS!
+                    console.log('🧹 Detectados dados órfãos no localStorage. Limpando...');
+                    localStorage.removeItem('vehicles');
+                    
+                    // Mostra mensagem pro usuário
+                    this.mostrarMensagemLimpeza();
+                    return;
+                }
+                
+                // PRIMEIRA VEZ = Migração legítima
+                console.log(`📦 Primeira migração: ${localVehicles.length} veículos → Firebase`);
                 for (const vehicle of localVehicles) {
                     await this.saveVehicle(vehicle);
                 }
                 localStorage.setItem('firebase_migrated', 'true');
+                console.log('✅ Migração inicial completa!');
+                return;
             }
             
-            // Migrar equipe
-            const localTeam = JSON.parse(localStorage.getItem('team') || 'null');
-            if (localTeam) {
-                await this.saveTeam(localTeam);
+            // CENÁRIO 3: Firebase tem dados, localStorage vazio
+            if (!vehiclesSnapshot.empty && localVehicles.length === 0) {
+                console.log('✅ Firebase tem dados, localStorage será preenchido via listener.');
+                localStorage.setItem('firebase_migrated', 'true');
+                return;
             }
             
-            console.log('✅ Dados migrados para Firebase!');
+            // CENÁRIO 4: Ambos vazios
+            console.log('✅ Ambos vazios. Sistema pronto para novos cadastros.');
+            
+            // Migrar equipe (só na primeira vez)
+            const jaMigrouEquipe = localStorage.getItem('team_migrated');
+            if (!jaMigrouEquipe) {
+                const localTeam = JSON.parse(localStorage.getItem('team') || 'null');
+                if (localTeam) {
+                    await this.saveTeam(localTeam);
+                    localStorage.setItem('team_migrated', 'true');
+                }
+            }
+            
         } catch (error) {
-            console.error('Erro ao migrar dados:', error);
+            console.error('Erro ao sincronizar dados:', error);
         }
+    },
+    
+    mostrarMensagemLimpeza() {
+        // Cria notificação discreta
+        const notif = document.createElement('div');
+        notif.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #3b82f6;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+        `;
+        notif.textContent = '🧹 Cache antigo removido. Sistema atualizado!';
+        
+        document.body.appendChild(notif);
+        
+        setTimeout(() => {
+            notif.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => notif.remove(), 300);
+        }, 3000);
     },
     
     setupRealtimeListeners() {
