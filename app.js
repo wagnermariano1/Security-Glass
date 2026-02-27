@@ -438,9 +438,10 @@ class AuthSystem {
 
         this.showDashboard();
         
-        // Inicializar notificações push
-        setTimeout(() => {
-            NotificationManager.init();
+        // Inicializar notificações push APÓS login (para salvar token com usuário correto)
+        setTimeout(async () => {
+            await PushNotifications.init();
+            console.log('✅ Notificações ativadas para:', APP_STATE.currentUser);
         }, 1000);
     }
 
@@ -519,6 +520,12 @@ class AuthSystem {
             userSelect.value = user;
             
             this.showDashboard();
+            
+            // Inicializar notificações após login automático
+            setTimeout(async () => {
+                await PushNotifications.init();
+                console.log('✅ Notificações ativadas para:', APP_STATE.currentUser);
+            }, 1000);
         }
         
         // Criar ID de sessão se não existir
@@ -3095,7 +3102,7 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     await FirebaseDB.init();
-    await PushNotifications.init();
+    // NÃO inicializar notificações aqui - vai inicializar DEPOIS do login
     PushNotifications.setupForegroundListener();
-    console.log('✅ App pronto com Firebase + Notificações!');
+    console.log('✅ App pronto com Firebase!');
 });
