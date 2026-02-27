@@ -471,6 +471,13 @@ class AuthSystem {
         
         document.body.classList.add(APP_STATE.currentRole);
         
+        // Mostrar configurações avançadas só para Wagner
+        if (APP_STATE.currentUser === 'wagner') {
+            document.getElementById('wagnerOnlySettings').style.display = 'block';
+        } else {
+            document.getElementById('wagnerOnlySettings').style.display = 'none';
+        }
+        
         Dashboard.init();
     }
 
@@ -3098,6 +3105,62 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('Erro ao registrar Service Worker:', err));
     });
 }
+
+// Função para zerar todos os dados (só Wagner)
+async function zerarTodosDados() {
+    const confirma1 = confirm('⚠️ ATENÇÃO! Isso vai apagar TODOS os veículos cadastrados!\n\nTem certeza?');
+    if (!confirma1) return;
+    
+    const confirma2 = confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação NÃO pode ser desfeita!\n\nConfirma a exclusão de TODOS os dados?');
+    if (!confirma2) return;
+    
+    try {
+        console.log('🗑️ Iniciando limpeza de dados...');
+        
+        // 1. Limpar localStorage
+        localStorage.removeItem('vehicles');
+        console.log('✅ localStorage limpo');
+        
+        // 2. Apagar vehicles do Firestore
+        if (window.firebase) {
+            const { db, collection, getDocs, deleteDoc, doc } = window.firebase;
+            const vehiclesRef = collection(db, 'vehicles');
+            const snapshot = await getDocs(vehiclesRef);
+            
+            console.log(`🗑️ Apagando ${snapshot.size} veículos do Firestore...`);
+            
+            const deletePromises = [];
+            snapshot.forEach((document) => {
+                deletePromises.push(deleteDoc(doc(db, 'vehicles', document.id)));
+            });
+            
+            await Promise.all(deletePromises);
+            console.log('✅ Firestore limpo');
+        }
+        
+        // 3. Atualizar dashboard
+        Dashboard.renderDashboard();
+        
+        alert('✅ Todos os dados foram zerados com sucesso!\n\nO sistema foi reiniciado.');
+        
+        // 4. Recarregar página para garantir
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erro ao zerar dados:', error);
+        alert('❌ Erro ao zerar dados: ' + error.message);
+    }
+}
+
+// Event listener para o botão Zerar Dados
+document.addEventListener('DOMContentLoaded', () => {
+    const zerarBtn = document.getElementById('zerarTudoBtn');
+    if (zerarBtn) {
+        zerarBtn.addEventListener('click', zerarTodosDados);
+    }
+});
 
 // Inicializar Firebase ao carregar página
 window.addEventListener('DOMContentLoaded', async () => {
