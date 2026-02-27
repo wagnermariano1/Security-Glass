@@ -2960,9 +2960,10 @@ class PushNotifications {
         if (this.initialized) return;
         
         try {
-            // Registrar service worker do FCM
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('🔔 FCM Service Worker registrado');
+            // Service Worker já está registrado (sw.js inclui Firebase Messaging)
+            // Aguardar registro estar ativo
+            const registration = await navigator.serviceWorker.ready;
+            console.log('🔔 Service Worker pronto para notificações');
             
             this.initialized = true;
             
