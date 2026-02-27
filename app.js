@@ -34,13 +34,32 @@ const FirebaseDB = {
     
     async syncLocalToFirebase() {
         try {
-            // Migrar veículos
+            // Verificar se já migrou antes (evita repopular)
+            const jaMigrou = localStorage.getItem('firebase_migrated');
+            if (jaMigrou === 'true') {
+                console.log('✅ Dados já foram migrados anteriormente. Pulando migração.');
+                return;
+            }
+            
+            // Verificar se há algo no Firebase antes de migrar
+            const { db, collection, getDocs } = window.firebase;
+            const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
+            
+            // Se Firebase JÁ TEM dados, NÃO migra localStorage!
+            if (!vehiclesSnapshot.empty) {
+                console.log('✅ Firebase já tem dados. Pulando migração do localStorage.');
+                localStorage.setItem('firebase_migrated', 'true');
+                return;
+            }
+            
+            // Migrar veículos SOMENTE se Firebase estiver vazio
             const localVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
             if (localVehicles.length > 0) {
-                console.log(`📦 Migrando ${localVehicles.length} veículos para Firebase...`);
+                console.log(`📦 Firebase vazio. Migrando ${localVehicles.length} veículos...`);
                 for (const vehicle of localVehicles) {
                     await this.saveVehicle(vehicle);
                 }
+                localStorage.setItem('firebase_migrated', 'true');
             }
             
             // Migrar equipe
@@ -3238,6 +3257,7 @@ async function zerarTodosDados() {
         
         // 1. Limpar localStorage
         localStorage.removeItem('vehicles');
+        localStorage.removeItem('firebase_migrated'); // Limpa flag de migração
         console.log('✅ localStorage limpo');
         
         // 2. Apagar vehicles do Firestore
