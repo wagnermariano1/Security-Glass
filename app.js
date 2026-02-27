@@ -2953,7 +2953,7 @@ class EsperaManager {
 
 // Sistema de Notificações Push
 class PushNotifications {
-    static VAPID_KEY = 'BFbQG-FvP8GneifDgUHbjd_HVR-jMfyXguF9byC3Otnbs-glEiGJjWxU5loSVcrhj2HB7y_nzOnDqVqBk0mzsiQ26';
+    static VAPID_KEY = 'BFbQG-FvP8GneifDgUHbjd_HVR-jMfyXguF9byC3Otnbs-glEiGJjWxU5loSVcrhj2HB7y_nzOnDqVqBk0mzsiQ';
     static initialized = false;
     
     static async init() {
