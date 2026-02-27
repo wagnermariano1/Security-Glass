@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v12.0 - Auto-Limpeza Inteligente
+// Security Glass App - Main JavaScript v13.0 - Botão Limpar Cache
 // Novo fluxo: Cadastrado → Desmontado → Aplicado → Montado
 
-console.log('🔥 Security Glass v12.0 - Auto-Limpeza Inteligente!');
+console.log('🔥 Security Glass v13.0 - Botão Limpar Cache!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -449,6 +449,9 @@ class AuthSystem {
         const logoutBtn = document.getElementById('logoutBtn');
         logoutBtn.addEventListener('click', () => this.logout());
         
+        const limparCacheBtn = document.getElementById('limparCacheBtn');
+        limparCacheBtn.addEventListener('click', () => this.limparCache());
+        
         const changePasswordBtn = document.getElementById('changePasswordBtn');
         changePasswordBtn.addEventListener('click', () => this.showChangePasswordModal());
     }
@@ -527,6 +530,38 @@ class AuthSystem {
         
         document.getElementById('passwordInput').value = '';
         document.getElementById('rememberMe').checked = false;
+    }
+    
+    static limparCache() {
+        const confirma = confirm('🧹 LIMPAR CACHE E DADOS ANTIGOS?\n\nIsso vai:\n✅ Limpar dados locais antigos\n✅ Sincronizar com a nuvem\n✅ Resolver problemas de carros "fantasmas"\n\nVocê será deslogado e precisará fazer login novamente.\n\nConfirma?');
+        
+        if (!confirma) return;
+        
+        try {
+            console.log('🧹 Limpando cache do usuário...');
+            
+            // Limpa TUDO do localStorage (exceto credenciais de equipe)
+            const team = localStorage.getItem('team');
+            const config = localStorage.getItem('config');
+            
+            localStorage.clear();
+            
+            // Restaura apenas equipe e config
+            if (team) localStorage.setItem('team', team);
+            if (config) localStorage.setItem('config', config);
+            
+            console.log('✅ Cache limpo com sucesso!');
+            
+            // Mostra mensagem de sucesso
+            alert('✅ Cache limpo com sucesso!\n\nVocê será redirecionado para a tela de login.');
+            
+            // Recarrega página (volta pro login)
+            window.location.reload();
+            
+        } catch (error) {
+            console.error('❌ Erro ao limpar cache:', error);
+            alert('❌ Erro ao limpar cache: ' + error.message);
+        }
     }
 
     static showDashboard() {
