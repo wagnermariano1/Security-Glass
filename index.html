@@ -15,6 +15,7 @@
         // Import Firebase
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js';
         
         // Firebase Configuration
         const firebaseConfig = {
@@ -29,9 +30,25 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const messaging = getMessaging(app);
         
         // Make Firebase available globally
-        window.firebase = { app, db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+        window.firebase = { 
+            app, 
+            db, 
+            collection, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            getDocs, 
+            deleteDoc, 
+            onSnapshot, 
+            query, 
+            orderBy,
+            messaging,
+            getToken,
+            onMessage
+        };
     </script>
 </head>
 <body>

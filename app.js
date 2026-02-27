@@ -195,6 +195,112 @@ const DB = {
     savePasswords: (passwords) => localStorage.setItem('passwords', JSON.stringify(passwords))
 };
 
+// Sistema de Notificações Push
+const NotificationManager = {
+    vapidKey: 'BFbQG-FvP8GneifDgUHbjd_HVR-jMfyXguF9byC3Otnbs-glEiGJjWxU5IoSVcrhj2HB7y_nzOnDqVqBkOmzsiQ',
+    
+    async init() {
+        if (!window.firebase || !window.firebase.messaging) {
+            console.log('⚠️ Firebase Messaging não disponível');
+            return;
+        }
+        
+        // Pedir permissão ao usuário
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            console.log('✅ Permissão de notificação concedida!');
+            await this.getToken();
+            this.listenToMessages();
+        } else {
+            console.log('❌ Permissão de notificação negada');
+        }
+    },
+    
+    async getToken() {
+        try {
+            const { messaging, getToken } = window.firebase;
+            const currentToken = await getToken(messaging, { vapidKey: this.vapidKey });
+            
+            if (currentToken) {
+                console.log('🔑 Token FCM obtido:', currentToken);
+                
+                // Salvar token associado ao usuário
+                const username = APP_STATE.currentUser;
+                if (username) {
+                    await this.saveToken(username, currentToken);
+                }
+                
+                return currentToken;
+            } else {
+                console.log('❌ Não foi possível obter token');
+            }
+        } catch (error) {
+            console.error('Erro ao obter token:', error);
+        }
+    },
+    
+    async saveToken(username, token) {
+        try {
+            const { db, doc, setDoc } = window.firebase;
+            await setDoc(doc(db, 'fcm_tokens', username), {
+                token: token,
+                updatedAt: new Date().toISOString()
+            });
+            console.log(`✅ Token salvo para ${username}`);
+        } catch (error) {
+            console.error('Erro ao salvar token:', error);
+        }
+    },
+    
+    listenToMessages() {
+        const { messaging, onMessage } = window.firebase;
+        
+        onMessage(messaging, (payload) => {
+            console.log('📬 Mensagem recebida:', payload);
+            
+            // Mostrar notificação mesmo com app aberto
+            const notificationTitle = payload.notification.title;
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: '/icon-192.png'
+            };
+            
+            new Notification(notificationTitle, notificationOptions);
+        });
+    },
+    
+    async sendNotification(username, title, body) {
+        try {
+            const { db, doc, getDoc } = window.firebase;
+            const tokenDoc = await getDoc(doc(db, 'fcm_tokens', username));
+            
+            if (!tokenDoc.exists()) {
+                console.log(`⚠️ Token não encontrado para ${username}`);
+                return;
+            }
+            
+            const token = tokenDoc.data().token;
+            
+            // Salvar notificação no Firestore para ser processada por Cloud Function
+            const { setDoc, collection } = window.firebase;
+            const notificationRef = doc(collection(db, 'notifications'));
+            
+            await setDoc(notificationRef, {
+                token: token,
+                title: title,
+                body: body,
+                createdAt: new Date().toISOString(),
+                status: 'pending'
+            });
+            
+            console.log(`📤 Notificação enviada para ${username}: ${title}`);
+        } catch (error) {
+            console.error('Erro ao enviar notificação:', error);
+        }
+    }
+};
+
 const APP_STATE = {
     currentUser: null,
     currentRole: null,
@@ -226,16 +332,33 @@ const Utils = {
     },
     
     openPhotoModal: (photoUrl) => {
-        // Criar modal para exibir foto
+        // Criar modal de forma segura (sem innerHTML para evitar problemas com aspas)
         const modal = document.createElement('div');
         modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
         
-        modal.innerHTML = `
-            <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column;">
-                <button onclick="this.closest('div').parentElement.remove()" style="position: absolute; top: -40px; right: 0; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 24px; color: #000;">×</button>
-                <img src="${photoUrl}" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;">
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.style.cssText = 'position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column;';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '×';
+        closeBtn.style.cssText = 'position: absolute; top: -50px; right: 0; background: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 28px; color: #000; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+        closeBtn.onclick = () => modal.remove();
+        
+        const img = document.createElement('img');
+        img.src = photoUrl;
+        img.style.cssText = 'max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);';
+        img.onerror = () => {
+            img.alt = 'Erro ao carregar imagem';
+            img.style.display = 'none';
+            const errorMsg = document.createElement('div');
+            errorMsg.textContent = '❌ Erro ao carregar foto';
+            errorMsg.style.cssText = 'color: white; font-size: 18px; padding: 20px;';
+            container.appendChild(errorMsg);
+        };
+        
+        container.appendChild(closeBtn);
+        container.appendChild(img);
+        modal.appendChild(container);
         
         // Fechar ao clicar fora da imagem
         modal.addEventListener('click', (e) => {
@@ -314,6 +437,11 @@ class AuthSystem {
         }
 
         this.showDashboard();
+        
+        // Inicializar notificações push
+        setTimeout(() => {
+            NotificationManager.init();
+        }, 1000);
     }
 
     static logout() {
@@ -1398,6 +1526,13 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
+            // Notificar Vinicius
+            PushNotifications.sendNotification(
+                ['vinicius'],
+                '✅ Carro desmontado',
+                `${vehicle.modelo} desmontado por ${APP_STATE.currentUserFullName}`
+            );
+            
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
             
@@ -1420,6 +1555,13 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
+            // Notificar Vinicius
+            PushNotifications.sendNotification(
+                ['vinicius'],
+                '⚠️ Carro em ESPERA',
+                `${vehicle.modelo} - Motivo: ${motivo}`
+            );
+            
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
             
@@ -1439,6 +1581,13 @@ class UpdateStatusModal {
             
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
+            
+            // Notificar Vinicius
+            PushNotifications.sendNotification(
+                ['vinicius'],
+                '✨ Carro aplicado',
+                `${vehicle.modelo} aplicado por ${APP_STATE.currentUserFullName}`
+            );
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
@@ -1493,6 +1642,13 @@ class UpdateStatusModal {
             
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
+            
+            // Notificar Vinicius
+            PushNotifications.sendNotification(
+                ['vinicius'],
+                '🎉 Carro finalizado',
+                `${vehicle.modelo} montado por ${APP_STATE.currentUserFullName}`
+            );
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
@@ -2239,6 +2395,20 @@ class RotaDesmontagemManager {
         DB.saveVehicles(vehicles);
         Dashboard.renderDashboard();
         
+        // Enviar notificações para montadores
+        const montadoresNotificados = new Set();
+        Object.keys(rotasPorMontador).forEach(montador => {
+            const qtdCarros = rotasPorMontador[montador].length;
+            if (qtdCarros > 0 && !montadoresNotificados.has(montador)) {
+                PushNotifications.sendNotification(
+                    [montador.toLowerCase()],
+                    '🚗 Nova rota de desmontagem',
+                    `${qtdCarros} ${qtdCarros === 1 ? 'carro' : 'carros'} aguardando`
+                );
+                montadoresNotificados.add(montador);
+            }
+        });
+        
         alert(`✅ Rota de Desmontagem salva com sucesso! ${saved} veículo(s) atualizado(s).`);
         
         this.loadRota();
@@ -2428,6 +2598,23 @@ class RotaAplicacaoManager {
         DB.saveVehicles(vehicles);
         Dashboard.renderDashboard();
         
+        // Notificar aplicadores
+        const aplicadoresPorCarros = {};
+        desmontados.forEach(v => {
+            if (v.aplicador) {
+                aplicadoresPorCarros[v.aplicador] = (aplicadoresPorCarros[v.aplicador] || 0) + 1;
+            }
+        });
+        
+        Object.keys(aplicadoresPorCarros).forEach(aplicador => {
+            const qtdCarros = aplicadoresPorCarros[aplicador];
+            PushNotifications.sendNotification(
+                [aplicador.toLowerCase()],
+                '🎨 Nova rota de aplicação',
+                `${qtdCarros} ${qtdCarros === 1 ? 'carro' : 'carros'} aguardando aplicação`
+            );
+        });
+        
         alert(`✅ Rota de Aplicação salva com sucesso! ${saved} veículo(s) atualizado(s).`);
         
         this.loadRota(); // Recarregar lista
@@ -2613,6 +2800,23 @@ class RotaMontagemManager {
         DB.saveVehicles(vehicles);
         Dashboard.renderDashboard();
         
+        // Notificar montadores
+        const montadoresPorCarros = {};
+        aplicados.forEach(v => {
+            if (v.montador) {
+                montadoresPorCarros[v.montador] = (montadoresPorCarros[v.montador] || 0) + 1;
+            }
+        });
+        
+        Object.keys(montadoresPorCarros).forEach(montador => {
+            const qtdCarros = montadoresPorCarros[montador];
+            PushNotifications.sendNotification(
+                [montador.toLowerCase()],
+                '🔧 Nova rota de montagem',
+                `${qtdCarros} ${qtdCarros === 1 ? 'carro' : 'carros'} aguardando montagem`
+            );
+        });
+        
         alert(`✅ Rota de Montagem salva com sucesso! ${saved} veículo(s) atualizado(s).`);
         
         this.loadRota();
@@ -2740,6 +2944,144 @@ class EsperaManager {
     }
 }
 
+// Sistema de Notificações Push
+class PushNotifications {
+    static VAPID_KEY = 'BFbQG-FvP8GneifDgUHbjd_HVR-jMfyXguF9byC3Otnbs-glEiGJjWxU5loSVcrhj2HB7y_nzOnDqVqBkOmzsiQ';
+    static initialized = false;
+    
+    static async init() {
+        if (this.initialized) return;
+        
+        try {
+            // Registrar service worker do FCM
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('🔔 FCM Service Worker registrado');
+            
+            this.initialized = true;
+            
+            // Pedir permissão automaticamente
+            await this.requestPermission();
+            
+        } catch (error) {
+            console.error('Erro ao inicializar notificações:', error);
+        }
+    }
+    
+    static async requestPermission() {
+        try {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                console.log('✅ Permissão de notificação concedida');
+                await this.getToken();
+            } else {
+                console.log('❌ Permissão de notificação negada');
+            }
+        } catch (error) {
+            console.error('Erro ao pedir permissão:', error);
+        }
+    }
+    
+    static async getToken() {
+        try {
+            const { messaging, getToken } = window.firebase;
+            
+            const token = await getToken(messaging, {
+                vapidKey: this.VAPID_KEY
+            });
+            
+            if (token) {
+                console.log('🔑 Token FCM:', token);
+                
+                // Salvar token associado ao usuário
+                const currentUser = APP_STATE.currentUser;
+                if (currentUser) {
+                    localStorage.setItem(`fcm_token_${currentUser}`, token);
+                    
+                    // Salvar no Firebase
+                    await this.saveTokenToFirebase(currentUser, token);
+                }
+                
+                return token;
+            }
+        } catch (error) {
+            console.error('Erro ao obter token:', error);
+        }
+    }
+    
+    static async saveTokenToFirebase(username, token) {
+        try {
+            const { db, doc, setDoc } = window.firebase;
+            await setDoc(doc(db, 'tokens', username), {
+                token: token,
+                updatedAt: new Date().toISOString(),
+                username: username
+            });
+            console.log('💾 Token salvo no Firebase');
+        } catch (error) {
+            console.error('Erro ao salvar token:', error);
+        }
+    }
+    
+    static async sendNotification(usernames, title, body, data = {}) {
+        console.log(`🔔 Enviando notificação para: ${usernames.join(', ')}`);
+        console.log(`📨 Título: ${title}`);
+        console.log(`📝 Mensagem: ${body}`);
+        
+        try {
+            // Chamar Cloud Function para enviar notificação REAL
+            const { app } = window.firebase;
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js');
+            
+            const functions = getFunctions(app);
+            const sendNotificationFunction = httpsCallable(functions, 'sendNotificationOnRotaSave');
+            
+            const result = await sendNotificationFunction({
+                usernames: usernames,
+                title: title,
+                body: body
+            });
+            
+            console.log('✅ Notificação enviada via Cloud Function:', result);
+            
+        } catch (error) {
+            console.error('❌ Erro ao enviar notificação:', error);
+            
+            // Fallback: Notificação local se Cloud Function falhar
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: 'security-glass',
+                    requireInteraction: false,
+                    vibrate: [200, 100, 200],
+                    data: data
+                });
+            }
+        }
+    }
+    
+    static setupForegroundListener() {
+        const { messaging, onMessage } = window.firebase;
+        
+        onMessage(messaging, (payload) => {
+            console.log('🔔 Notificação recebida (foreground):', payload);
+            
+            // Mostrar notificação mesmo com app aberto
+            new Notification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: 'security-glass',
+                requireInteraction: false,
+                vibrate: [200, 100, 200],
+                data: payload.data
+            });
+        });
+    }
+}
+
 // Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -2753,5 +3095,7 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     await FirebaseDB.init();
-    console.log('✅ App pronto com Firebase!');
+    await PushNotifications.init();
+    PushNotifications.setupForegroundListener();
+    console.log('✅ App pronto com Firebase + Notificações!');
 });
