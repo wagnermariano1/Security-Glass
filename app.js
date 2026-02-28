@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v13.0 - Botão Limpar Cache
-// Novo fluxo: Cadastrado → Desmontado → Aplicado → Montado
+// Security Glass App - Main JavaScript v14.0 - MIGRAÇÃO DESATIVADA
+// Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
 
-console.log('🔥 Security Glass v13.0 - Botão Limpar Cache!');
+console.log('🔥 Security Glass v14.0 - Migração DESATIVADA!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -25,100 +25,13 @@ const FirebaseDB = {
         this.initialized = true;
         console.log('✅ Firebase inicializado!');
         
-        // Sincronizar dados do localStorage para Firebase (primeira vez)
-        await this.syncLocalToFirebase();
+        // MIGRAÇÃO DESATIVADA PERMANENTEMENTE
+        // Firebase é a ÚNICA fonte da verdade
+        // localStorage serve APENAS como cache local
+        console.log('🔒 Migração desativada. Firebase é a fonte da verdade.');
         
         // Configurar listeners em tempo real
         this.setupRealtimeListeners();
-    },
-    
-    async syncLocalToFirebase() {
-        try {
-            const { db, collection, getDocs } = window.firebase;
-            const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
-            const localVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
-            
-            // CENÁRIO 1: Firebase tem dados E localStorage também tem
-            if (!vehiclesSnapshot.empty && localVehicles.length > 0) {
-                console.log('🔄 Firebase e localStorage têm dados. Firebase é a fonte da verdade.');
-                // Firebase sincroniza via listener, localStorage será atualizado automaticamente
-                return;
-            }
-            
-            // CENÁRIO 2: Firebase VAZIO mas localStorage TEM dados
-            if (vehiclesSnapshot.empty && localVehicles.length > 0) {
-                // Verificar se é migração inicial legítima OU dados órfãos
-                const jaMigrou = localStorage.getItem('firebase_migrated');
-                
-                if (jaMigrou === 'true') {
-                    // JÁ MIGROU ANTES = São dados ÓRFÃOS!
-                    console.log('🧹 Detectados dados órfãos no localStorage. Limpando...');
-                    localStorage.removeItem('vehicles');
-                    
-                    // Mostra mensagem pro usuário
-                    this.mostrarMensagemLimpeza();
-                    return;
-                }
-                
-                // PRIMEIRA VEZ = Migração legítima
-                console.log(`📦 Primeira migração: ${localVehicles.length} veículos → Firebase`);
-                for (const vehicle of localVehicles) {
-                    await this.saveVehicle(vehicle);
-                }
-                localStorage.setItem('firebase_migrated', 'true');
-                console.log('✅ Migração inicial completa!');
-                return;
-            }
-            
-            // CENÁRIO 3: Firebase tem dados, localStorage vazio
-            if (!vehiclesSnapshot.empty && localVehicles.length === 0) {
-                console.log('✅ Firebase tem dados, localStorage será preenchido via listener.');
-                localStorage.setItem('firebase_migrated', 'true');
-                return;
-            }
-            
-            // CENÁRIO 4: Ambos vazios
-            console.log('✅ Ambos vazios. Sistema pronto para novos cadastros.');
-            
-            // Migrar equipe (só na primeira vez)
-            const jaMigrouEquipe = localStorage.getItem('team_migrated');
-            if (!jaMigrouEquipe) {
-                const localTeam = JSON.parse(localStorage.getItem('team') || 'null');
-                if (localTeam) {
-                    await this.saveTeam(localTeam);
-                    localStorage.setItem('team_migrated', 'true');
-                }
-            }
-            
-        } catch (error) {
-            console.error('Erro ao sincronizar dados:', error);
-        }
-    },
-    
-    mostrarMensagemLimpeza() {
-        // Cria notificação discreta
-        const notif = document.createElement('div');
-        notif.style.cssText = `
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background: #3b82f6;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 9999;
-            font-size: 14px;
-            animation: slideIn 0.3s ease-out;
-        `;
-        notif.textContent = '🧹 Cache antigo removido. Sistema atualizado!';
-        
-        document.body.appendChild(notif);
-        
-        setTimeout(() => {
-            notif.style.animation = 'slideOut 0.3s ease-in';
-            setTimeout(() => notif.remove(), 300);
-        }, 3000);
     },
     
     setupRealtimeListeners() {
