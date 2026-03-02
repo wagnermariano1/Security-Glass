@@ -276,12 +276,12 @@
                 <form id="newVehicleForm">
                     <div class="form-section">
                         <label class="btn btn-secondary upload-btn">
-                            📷 Capturar/Enviar Foto
-                            <input type="file" id="vehiclePhoto" accept="image/*" capture="environment" style="display:none">
+                            📷 Capturar/Enviar Foto ou Print
+                            <input type="file" id="vehiclePhoto" accept="image/*" style="display:none">
                         </label>
                         <div id="photoPreview" class="photo-preview"></div>
-                        <button type="button" id="extractDataBtn" class="btn btn-secondary" style="display:none">
-                            🔍 Extrair Dados da Foto
+                        <button type="button" id="extractDataBtn" class="btn btn-primary" style="display:none">
+                            🔍 Extraindo dados... <span id="ocrProgress"></span>
                         </button>
                     </div>
 
@@ -575,6 +575,8 @@
         </div>
     </div>
 
+    <!-- Tesseract.js para OCR -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="app.js"></script>
 </body>
 </html>

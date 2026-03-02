@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v14.0 - MIGRAÇÃO DESATIVADA
+// Security Glass App - Main JavaScript v15.0 - OCR Automático + Notificações Corrigidas
 // Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
 
-console.log('🔥 Security Glass v14.0 - Migração DESATIVADA!');
+console.log('🔥 Security Glass v15.0 - OCR + Notificações OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1191,21 +1191,56 @@ class VehicleForm {
         const extractBtn = document.getElementById('extractDataBtn');
         const chassiInput = document.getElementById('chassi');
         
-        photoInput.addEventListener('change', (e) => {
+        photoInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    photoPreview.innerHTML = `<img src="${event.target.result}" alt="Foto do veículo">`;
+                reader.onload = async (event) => {
+                    const imageData = event.target.result;
+                    photoPreview.innerHTML = `<img src="${imageData}" alt="Foto do veículo">`;
+                    
+                    // OCR AUTOMÁTICO
                     extractBtn.style.display = 'block';
-                    extractBtn.dataset.imageData = event.target.result;
+                    extractBtn.disabled = true;
+                    extractBtn.innerHTML = '🔍 Lendo foto... <span id="ocrProgress">0%</span>';
+                    
+                    try {
+                        const result = await Tesseract.recognize(
+                            imageData,
+                            'por',
+                            {
+                                logger: m => {
+                                    if (m.status === 'recognizing text') {
+                                        const progress = Math.round(m.progress * 100);
+                                        document.getElementById('ocrProgress').textContent = `${progress}%`;
+                                    }
+                                }
+                            }
+                        );
+                        
+                        const text = result.data.text.toUpperCase();
+                        console.log('📝 Texto extraído:', text);
+                        
+                        // Extrair dados comuns
+                        this.extractVehicleData(text);
+                        
+                        extractBtn.innerHTML = '✅ Dados extraídos!';
+                        setTimeout(() => {
+                            extractBtn.style.display = 'none';
+                        }, 2000);
+                        
+                    } catch (error) {
+                        console.error('Erro OCR:', error);
+                        extractBtn.innerHTML = '❌ Erro ao ler foto';
+                        extractBtn.disabled = false;
+                    }
                 };
                 reader.readAsDataURL(file);
             }
         });
 
         extractBtn.addEventListener('click', () => {
-            alert('Funcionalidade de OCR: Em produção, isso extrairia automaticamente os dados da foto.\n\nPor enquanto, preencha os campos manualmente.');
+            // Botão agora é apenas informativo
         });
 
         chassiInput.addEventListener('blur', () => {
@@ -1225,6 +1260,47 @@ class VehicleForm {
                 extractBtn.style.display = 'none';
             });
         });
+    }
+    
+    static extractVehicleData(text) {
+        // Extrai concessionária (procura por nomes conhecidos)
+        const concessionarias = ['KOBE', 'HONDA', 'NISSAN', 'BYD', 'VOLVO', 'TOYOTA', 'FORD', 'RENAULT', 'CHEVROLET', 'FIAT'];
+        for (const conc of concessionarias) {
+            if (text.includes(conc)) {
+                document.getElementById('concessionaria').value = conc;
+                break;
+            }
+        }
+        
+        // Extrai chassi (17 caracteres alfanuméricos)
+        const chassiMatch = text.match(/[A-HJ-NPR-Z0-9]{17}/);
+        if (chassiMatch) {
+            document.getElementById('chassi').value = chassiMatch[0];
+        }
+        
+        // Extrai modelo (palavras curtas em maiúsculas)
+        const modelos = text.match(/\b[A-Z]{2,10}\b/g);
+        if (modelos && modelos.length > 0) {
+            const modeloProvavel = modelos.find(m => 
+                !concessionarias.includes(m) && 
+                m.length >= 2 && 
+                m.length <= 10
+            );
+            if (modeloProvavel) {
+                document.getElementById('modelo').value = modeloProvavel;
+            }
+        }
+        
+        // Extrai local (procura por bairros conhecidos)
+        const locais = ['BARRA', 'TIJUCA', 'CENTRO', 'ZONA SUL', 'BOTAFOGO', 'COPACABANA', 'IPANEMA', 'LEBLON'];
+        for (const local of locais) {
+            if (text.includes(local)) {
+                document.getElementById('local').value = local;
+                break;
+            }
+        }
+        
+        console.log('✅ Dados preenchidos automaticamente!');
     }
 
     static checkDuplicateChassi() {
@@ -1557,12 +1633,8 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
-            // Notificar Vinicius
-            PushNotifications.sendNotification(
-                ['vinicius'],
-                '✅ Carro desmontado',
-                `${vehicle.modelo} desmontado por ${APP_STATE.currentUserFullName}`
-            );
+            // Notificação enviada pela Cloud Function automaticamente
+            // (não precisa enviar aqui para evitar duplicação)
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
@@ -1586,12 +1658,7 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
-            // Notificar Vinicius
-            PushNotifications.sendNotification(
-                ['vinicius'],
-                '⚠️ Carro em ESPERA',
-                `${vehicle.modelo} - Motivo: ${motivo}`
-            );
+            // Notificação enviada pela Cloud Function automaticamente
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
@@ -1613,12 +1680,7 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
-            // Notificar Vinicius
-            PushNotifications.sendNotification(
-                ['vinicius'],
-                '✨ Carro aplicado',
-                `${vehicle.modelo} aplicado por ${APP_STATE.currentUserFullName}`
-            );
+            // Notificação enviada pela Cloud Function automaticamente
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
@@ -1674,12 +1736,7 @@ class UpdateStatusModal {
             DB.saveVehicles(vehicles);
             Dashboard.renderDashboard();
             
-            // Notificar Vinicius
-            PushNotifications.sendNotification(
-                ['vinicius'],
-                '🎉 Carro finalizado',
-                `${vehicle.modelo} montado por ${APP_STATE.currentUserFullName}`
-            );
+            // Notificação enviada pela Cloud Function automaticamente
             
             document.getElementById('updateStatusModal').classList.remove('active');
             document.getElementById('updateStatusForm').reset();
