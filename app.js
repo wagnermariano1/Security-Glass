@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v15.1 - OCR corrigido + Cancelar OK
+// Security Glass App - Main JavaScript v16.1 - OCR Inteligente + Senhas no Firebase
 // Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
 
-console.log('🔥 Security Glass v15.1 - OCR + Cancelar OK!');
+console.log('🔥 Security Glass v16.1 - OCR + Senhas Firebase!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -159,7 +159,23 @@ const DB = {
     getModelos: () => JSON.parse(localStorage.getItem('modelos') || '[]'),
     saveModelos: (list) => localStorage.setItem('modelos', JSON.stringify(list)),
     
-    getPasswords: () => {
+    getPasswords: async () => {
+        // Primeiro tenta buscar do Firebase
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const { db, doc, getDoc } = window.firebase;
+                const passwordsDoc = await getDoc(doc(db, 'config', 'passwords'));
+                
+                if (passwordsDoc.exists()) {
+                    console.log('🔐 Senhas carregadas do Firebase');
+                    return passwordsDoc.data();
+                }
+            } catch (error) {
+                console.log('⚠️ Erro ao buscar senhas do Firebase:', error);
+            }
+        }
+        
+        // Fallback: localStorage ou padrão
         const defaultPasswords = {
             wagner: '11111111',
             vinicius: '11111111',
@@ -169,9 +185,32 @@ const DB = {
             arthur: '11111111',
             claiton: '11111111'
         };
-        return JSON.parse(localStorage.getItem('passwords') || JSON.stringify(defaultPasswords));
+        
+        const storedPasswords = localStorage.getItem('passwords');
+        if (storedPasswords) {
+            console.log('🔐 Senhas carregadas do localStorage');
+            return JSON.parse(storedPasswords);
+        }
+        
+        console.log('🔐 Usando senhas padrão');
+        return defaultPasswords;
     },
-    savePasswords: (passwords) => localStorage.setItem('passwords', JSON.stringify(passwords))
+    
+    savePasswords: async (passwords) => {
+        // Salva no localStorage (backward compatibility)
+        localStorage.setItem('passwords', JSON.stringify(passwords));
+        
+        // Salva no Firebase
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const { db, doc, setDoc } = window.firebase;
+                await setDoc(doc(db, 'config', 'passwords'), passwords);
+                console.log('🔐 Senhas salvas no Firebase');
+            } catch (error) {
+                console.error('❌ Erro ao salvar senhas no Firebase:', error);
+            }
+        }
+    }
 };
 
 // Sistema de Notificações Push
@@ -369,7 +408,7 @@ class AuthSystem {
         changePasswordBtn.addEventListener('click', () => this.showChangePasswordModal());
     }
 
-    static login() {
+    static async login() {
         const userSelect = document.getElementById('userSelect');
         const passwordInput = document.getElementById('passwordInput');
         const rememberMe = document.getElementById('rememberMe');
@@ -381,7 +420,7 @@ class AuthSystem {
             return;
         }
         
-        const passwords = DB.getPasswords();
+        const passwords = await DB.getPasswords();
         
         if (passwords[username] !== password) {
             alert('Senha incorreta!');
@@ -576,7 +615,7 @@ class AuthSystem {
         });
     }
     
-    static changePassword() {
+    static async changePassword() {
         const user = document.getElementById('changePasswordUser').value;
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
@@ -597,7 +636,7 @@ class AuthSystem {
             return;
         }
         
-        const passwords = DB.getPasswords();
+        const passwords = await DB.getPasswords();
         
         if (passwords[user] !== currentPassword) {
             alert('Senha atual incorreta!');
@@ -605,7 +644,7 @@ class AuthSystem {
         }
         
         passwords[user] = newPassword;
-        DB.savePasswords(passwords);
+        await DB.savePasswords(passwords);
         
         alert('Senha alterada com sucesso!');
         document.getElementById('changePasswordModal').classList.remove('active');
@@ -1272,44 +1311,188 @@ class VehicleForm {
     }
     
     static extractVehicleData(text) {
-        // Extrai concessionária (procura por nomes conhecidos)
-        const concessionarias = ['KOBE', 'HONDA', 'NISSAN', 'BYD', 'VOLVO', 'TOYOTA', 'FORD', 'RENAULT', 'CHEVROLET', 'FIAT'];
+        console.log('🔍 Iniciando extração inteligente de dados...');
+        
+        // Divide o texto em linhas para análise contextual
+        const lines = text.split('\n').filter(l => l.trim().length > 0);
+        
+        // ========== 1. CHASSI (PRIORIDADE MÁXIMA) ==========
+        console.log('🔍 Procurando chassi...');
+        let chassi = null;
+        
+        // Procura por padrão de chassi (17 caracteres)
+        const chassiPatterns = [
+            /CHASSI[:\s]*([A-HJ-NPR-Z0-9]{17})/i,
+            /VIN[:\s]*([A-HJ-NPR-Z0-9]{17})/i,
+            /CHASSIS[:\s]*([A-HJ-NPR-Z0-9]{17})/i,
+            /\b([A-HJ-NPR-Z0-9]{17})\b/
+        ];
+        
+        for (const pattern of chassiPatterns) {
+            const match = text.match(pattern);
+            if (match) {
+                chassi = match[1] || match[0];
+                if (chassi.length === 17) {
+                    document.getElementById('chassi').value = chassi;
+                    console.log('✅ Chassi encontrado:', chassi);
+                    break;
+                }
+            }
+        }
+        
+        if (!chassi) console.log('⚠️ Chassi não encontrado');
+        
+        // ========== 2. MODELO (SEGUNDA PRIORIDADE) ==========
+        console.log('🔍 Procurando modelo...');
+        let modelo = null;
+        
+        // Lista de modelos conhecidos (expandida)
+        const modelosConhecidos = [
+            'WRV', 'CIVIC', 'FIT', 'CITY', 'HRV', 'CRV', // Honda
+            'KICKS', 'VERSA', 'SENTRA', 'FRONTIER', 'MARCH', // Nissan
+            'SONG', 'YUAN', 'TAN', 'HAN', 'DOLPHIN', // BYD
+            'XC40', 'XC60', 'XC90', 'S60', 'V60', // Volvo
+            'COROLLA', 'HILUX', 'RAV4', 'YARIS', 'ETIOS', // Toyota
+            'RANGER', 'ECOSPORT', 'KA', 'FUSION', 'BRONCO', // Ford
+            'KWID', 'SANDERO', 'LOGAN', 'DUSTER', 'CAPTUR', // Renault
+            'ONIX', 'TRACKER', 'SPIN', 'S10', 'TRAILBLAZER', // Chevrolet
+            'ARGO', 'MOBI', 'CRONOS', 'TORO', 'STRADA' // Fiat
+        ];
+        
+        // Procura com palavras-chave contextuais
+        const modeloPatterns = [
+            /MODELO[:\s]*([A-Z0-9\-]+)/i,
+            /VEÍCULO[:\s]*([A-Z0-9\-]+)/i,
+            /VEICULO[:\s]*([A-Z0-9\-]+)/i,
+            /MODEL[:\s]*([A-Z0-9\-]+)/i
+        ];
+        
+        for (const pattern of modeloPatterns) {
+            const match = text.match(pattern);
+            if (match && match[1]) {
+                modelo = match[1].toUpperCase().trim();
+                document.getElementById('modelo').value = modelo;
+                console.log('✅ Modelo encontrado (contexto):', modelo);
+                break;
+            }
+        }
+        
+        // Se não achou com contexto, procura na lista de modelos conhecidos
+        if (!modelo) {
+            for (const m of modelosConhecidos) {
+                if (text.includes(m)) {
+                    modelo = m;
+                    document.getElementById('modelo').value = modelo;
+                    console.log('✅ Modelo encontrado (lista):', modelo);
+                    break;
+                }
+            }
+        }
+        
+        if (!modelo) console.log('⚠️ Modelo não encontrado');
+        
+        // ========== 3. CONCESSIONÁRIA ==========
+        console.log('🔍 Procurando concessionária...');
+        let concessionaria = null;
+        
+        // Lista expandida de concessionárias
+        const concessionarias = [
+            'KOBE', 'HONDA', 'NISSAN', 'BYD', 'VOLVO', 'TOYOTA', 
+            'FORD', 'RENAULT', 'CHEVROLET', 'FIAT', 'JEEP',
+            'HYUNDAI', 'MITSUBISHI', 'CAOA', 'PEUGEOT', 'CITROEN'
+        ];
+        
+        // Procura nas primeiras 5 linhas (topo do documento)
+        const topoDocumento = lines.slice(0, 5).join(' ').toUpperCase();
+        
         for (const conc of concessionarias) {
-            if (text.includes(conc)) {
+            if (topoDocumento.includes(conc)) {
+                concessionaria = conc;
                 document.getElementById('concessionaria').value = conc;
+                console.log('✅ Concessionária encontrada (topo):', conc);
                 break;
             }
         }
         
-        // Extrai chassi (17 caracteres alfanuméricos)
-        const chassiMatch = text.match(/[A-HJ-NPR-Z0-9]{17}/);
-        if (chassiMatch) {
-            document.getElementById('chassi').value = chassiMatch[0];
-        }
-        
-        // Extrai modelo (palavras curtas em maiúsculas)
-        const modelos = text.match(/\b[A-Z]{2,10}\b/g);
-        if (modelos && modelos.length > 0) {
-            const modeloProvavel = modelos.find(m => 
-                !concessionarias.includes(m) && 
-                m.length >= 2 && 
-                m.length <= 10
-            );
-            if (modeloProvavel) {
-                document.getElementById('modelo').value = modeloProvavel;
+        // Se não achou no topo, procura em todo documento
+        if (!concessionaria) {
+            for (const conc of concessionarias) {
+                if (text.includes(conc)) {
+                    concessionaria = conc;
+                    document.getElementById('concessionaria').value = conc;
+                    console.log('✅ Concessionária encontrada:', conc);
+                    break;
+                }
             }
         }
         
-        // Extrai local (procura por bairros conhecidos)
-        const locais = ['BARRA', 'TIJUCA', 'CENTRO', 'ZONA SUL', 'BOTAFOGO', 'COPACABANA', 'IPANEMA', 'LEBLON'];
-        for (const local of locais) {
-            if (text.includes(local)) {
-                document.getElementById('local').value = local;
-                break;
+        if (!concessionaria) console.log('⚠️ Concessionária não encontrada');
+        
+        // ========== 4. LOCAL/ENDEREÇO ==========
+        console.log('🔍 Procurando local...');
+        let local = null;
+        
+        // Procura por padrões de endereço
+        const enderecoPatterns = [
+            /ENDEREÇO[:\s]*([^\n]+)/i,
+            /ENDERECO[:\s]*([^\n]+)/i,
+            /RUA[:\s]*([^\n]+)/i,
+            /AV[:\s\.]*([^\n]+)/i,
+            /AVENIDA[:\s]*([^\n]+)/i
+        ];
+        
+        for (const pattern of enderecoPatterns) {
+            const match = text.match(pattern);
+            if (match && match[1]) {
+                const enderecoCompleto = match[1].toUpperCase();
+                
+                // Extrai bairro do endereço
+                const bairrosConhecidos = [
+                    'BARRA DA TIJUCA', 'BARRA', 'TIJUCA', 'CENTRO', 
+                    'BOTAFOGO', 'COPACABANA', 'IPANEMA', 'LEBLON',
+                    'RECREIO', 'JACAREPAGUÁ', 'CAMPO GRANDE',
+                    'ZONA SUL', 'ZONA NORTE', 'ZONA OESTE'
+                ];
+                
+                for (const bairro of bairrosConhecidos) {
+                    if (enderecoCompleto.includes(bairro)) {
+                        local = bairro;
+                        document.getElementById('local').value = bairro;
+                        console.log('✅ Local encontrado (endereço):', bairro);
+                        break;
+                    }
+                }
+                
+                if (local) break;
             }
         }
         
-        console.log('✅ Dados preenchidos automaticamente!');
+        // Se não achou no endereço, procura bairros diretamente
+        if (!local) {
+            const bairros = ['BARRA DA TIJUCA', 'BARRA', 'TIJUCA', 'CENTRO', 'BOTAFOGO', 'COPACABANA', 'IPANEMA', 'LEBLON', 'RECREIO'];
+            for (const bairro of bairros) {
+                if (text.includes(bairro)) {
+                    local = bairro;
+                    document.getElementById('local').value = bairro;
+                    console.log('✅ Local encontrado:', bairro);
+                    break;
+                }
+            }
+        }
+        
+        if (!local) console.log('⚠️ Local não encontrado');
+        
+        // ========== RESUMO ==========
+        const encontrados = [chassi, modelo, concessionaria, local].filter(Boolean).length;
+        console.log(`✅ Extração concluída: ${encontrados}/4 campos preenchidos`);
+        
+        if (encontrados === 0) {
+            alert('⚠️ Não foi possível extrair dados da foto.\n\nTente uma foto mais nítida ou preencha manualmente.');
+        } else if (encontrados < 4) {
+            alert(`✅ ${encontrados} campo(s) preenchido(s)!\n\nVerifique e complete os campos restantes.`);
+        } else {
+            alert('✅ Todos os dados foram extraídos!\n\nVerifique se estão corretos.');
+        }
     }
 
     static checkDuplicateChassi() {
