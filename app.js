@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v15.0 - OCR Automático + Notificações Corrigidas
+// Security Glass App - Main JavaScript v15.1 - OCR corrigido + Cancelar OK
 // Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
 
-console.log('🔥 Security Glass v15.0 - OCR + Notificações OK!');
+console.log('🔥 Security Glass v15.1 - OCR + Cancelar OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1187,12 +1187,13 @@ class VehicleForm {
     static setupForm() {
         const form = document.getElementById('newVehicleForm');
         const photoInput = document.getElementById('vehiclePhoto');
+        const photoInputCamera = document.getElementById('vehiclePhotoCamera');
         const photoPreview = document.getElementById('photoPreview');
         const extractBtn = document.getElementById('extractDataBtn');
         const chassiInput = document.getElementById('chassi');
         
-        photoInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
+        // Função compartilhada para processar foto
+        const processPhoto = async (file) => {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
@@ -1237,7 +1238,11 @@ class VehicleForm {
                 };
                 reader.readAsDataURL(file);
             }
-        });
+        };
+        
+        // Event listeners para ambos inputs
+        photoInput.addEventListener('change', (e) => processPhoto(e.target.files[0]));
+        photoInputCamera.addEventListener('change', (e) => processPhoto(e.target.files[0]));
 
         extractBtn.addEventListener('click', () => {
             // Botão agora é apenas informativo
@@ -1252,12 +1257,16 @@ class VehicleForm {
             this.submitForm();
         };
 
+        const modal = document.getElementById('newVehicleModal');
         document.querySelectorAll('#newVehicleModal .modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.classList.remove('active');
                 form.reset();
                 photoPreview.innerHTML = '';
                 extractBtn.style.display = 'none';
+                // Limpar inputs de foto
+                photoInput.value = '';
+                photoInputCamera.value = '';
             });
         });
     }

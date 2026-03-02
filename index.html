@@ -275,10 +275,16 @@
                 </div>
                 <form id="newVehicleForm">
                     <div class="form-section">
-                        <label class="btn btn-secondary upload-btn">
-                            📷 Capturar/Enviar Foto ou Print
-                            <input type="file" id="vehiclePhoto" accept="image/*" style="display:none">
-                        </label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <label class="btn btn-secondary" style="flex: 1; text-align: center;">
+                                📷 Tirar Foto
+                                <input type="file" id="vehiclePhotoCamera" accept="image/*" capture="environment" style="display:none">
+                            </label>
+                            <label class="btn btn-secondary" style="flex: 1; text-align: center;">
+                                🖼️ Escolher Arquivo
+                                <input type="file" id="vehiclePhoto" accept="image/*" style="display:none">
+                            </label>
+                        </div>
                         <div id="photoPreview" class="photo-preview"></div>
                         <button type="button" id="extractDataBtn" class="btn btn-primary" style="display:none">
                             🔍 Extraindo dados... <span id="ocrProgress"></span>
