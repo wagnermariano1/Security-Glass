@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v18.1 - SUGESTÃO INTELIGENTE DE ROTAS!
+// Security Glass App - Main JavaScript v18.2 - VALIDAÇÃO COMPLETA CONTRA HISTÓRICO!
 // Sistema sugere próximo número considerando TODAS as rotas existentes!
 
-console.log('🔥 Security Glass v18.1 - Sugestão Inteligente!');
+console.log('🔥 Security Glass v18.2 - Validação Completa!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2890,6 +2890,18 @@ class RotaAplicacaoManager {
         let temDuplicado = false;
         let mensagemErro = '';
         
+        // PRIMEIRO: Carregar sequências JÁ EXISTENTES no banco
+        vehicles.forEach(v => {
+            if (v.aplicador && v.sequenciaAplicacao) {
+                if (!rotasPorAplicador[v.aplicador]) {
+                    rotasPorAplicador[v.aplicador] = [];
+                }
+                rotasPorAplicador[v.aplicador].push(v.sequenciaAplicacao);
+            }
+        });
+        
+        // SEGUNDO: Verificar se os novos conflitam com existentes
+        
         desmontados.forEach(v => {
             const seqInput = document.getElementById(`seq_${v.id}`);
             const appSelect = document.getElementById(`app_${v.id}`);
@@ -3104,6 +3116,18 @@ class RotaMontagemManager {
         const rotasPorMontador = {};
         let temDuplicado = false;
         let mensagemErro = '';
+        
+        // PRIMEIRO: Carregar rotas JÁ EXISTENTES no banco
+        vehicles.forEach(v => {
+            if (v.montador && v.rotaMontagem) {
+                if (!rotasPorMontador[v.montador]) {
+                    rotasPorMontador[v.montador] = [];
+                }
+                rotasPorMontador[v.montador].push(v.rotaMontagem);
+            }
+        });
+        
+        // SEGUNDO: Verificar se os novos conflitam com existentes
         
         aplicados.forEach(v => {
             const rotaInput = document.getElementById(`rotaMont_${v.id}`);
