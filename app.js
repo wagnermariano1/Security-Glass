@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v17.1 - RECURSÃO CORRIGIDA!
-// Cadastrar, Editar, Deletar, Status = TUDO salva no Firebase agora!
+// Security Glass App - Main JavaScript v18.1 - SUGESTÃO INTELIGENTE DE ROTAS!
+// Sistema sugere próximo número considerando TODAS as rotas existentes!
 
-console.log('🔥 Security Glass v17.1 - RECURSÃO CORRIGIDA!');
+console.log('🔥 Security Glass v18.1 - Sugestão Inteligente!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2525,13 +2525,17 @@ document.addEventListener('DOMContentLoaded', () => {
 class RotaDesmontagemManager {
     static loadRota() {
         const vehicles = DB.getVehicles();
-        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
+        // Filtrar: cadastrados/espera E sem montador atribuído ainda
+        const cadastrados = vehicles.filter(v => 
+            (v.status === 'cadastrado' || v.status === 'espera') && 
+            !v.montador // Só mostra se NÃO tem montador
+        );
         const team = DB.getTeam();
         
         const list = document.getElementById('rotaDesmontagemList');
         
         if (cadastrados.length === 0) {
-            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo cadastrado aguardando desmontagem!</p></div>';
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo pendente de atribuição!</p></div>';
             return;
         }
         
@@ -2605,7 +2609,6 @@ class RotaDesmontagemManager {
     
     static recalcularRota(vehicleId) {
         const vehicles = DB.getVehicles();
-        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
         
         // Pegar montador selecionado NO DOM
         const montadorSelect = document.getElementById(`montDesm_${vehicleId}`);
@@ -2623,23 +2626,31 @@ class RotaDesmontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador (híbrido: BD + TELA)
+        // Contar números de rota USADOS por esse montador em TODOS os carros
         const numerosUsados = [];
         
-        cadastrados.forEach(v => {
+        vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // Pegar montador da TELA (pode ter sido alterado mas não salvo)
+            // Verificar se esse carro pertence ao montador
+            if (v.montador === novoMontador && v.rotaDesmontagem) {
+                numerosUsados.push(v.rotaDesmontagem);
+            }
+        });
+        
+        // TAMBÉM verificar carros na tela (não salvos ainda)
+        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
+        cadastrados.forEach(v => {
+            if (v.id === vehicleId) return;
+            
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             const montadorAtual = montSelect ? montSelect.value : v.montador;
             
-            // Se é do mesmo montador que estamos verificando
             if (montadorAtual === novoMontador) {
-                // Pegar número da TELA (pode ter sido alterado)
                 const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
                 const numero = rotaInput ? parseInt(rotaInput.value) : v.rotaDesmontagem;
                 
-                if (numero) {
+                if (numero && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -2650,6 +2661,8 @@ class RotaDesmontagemManager {
         
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
+        
+        console.log(`🔢 ${novoMontador}: rotas usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -2728,13 +2741,17 @@ class RotaDesmontagemManager {
 class RotaAplicacaoManager {
     static loadRota() {
         const vehicles = DB.getVehicles();
-        const desmontados = vehicles.filter(v => v.status === 'desmontado');
+        // Filtrar: desmontados E sem aplicador atribuído ainda
+        const desmontados = vehicles.filter(v => 
+            v.status === 'desmontado' && 
+            !v.aplicador // Só mostra se NÃO tem aplicador
+        );
         const team = DB.getTeam();
         
         const list = document.getElementById('rotaAplicacaoList');
         
         if (desmontados.length === 0) {
-            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo desmontado aguardando aplicação!</p></div>';
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo pendente de atribuição!</p></div>';
             return;
         }
         
@@ -2808,7 +2825,6 @@ class RotaAplicacaoManager {
     
     static recalcularRota(vehicleId) {
         const vehicles = DB.getVehicles();
-        const desmontados = vehicles.filter(v => v.status === 'desmontado');
         
         // Pegar aplicador selecionado NO DOM
         const aplicadorSelect = document.getElementById(`app_${vehicleId}`);
@@ -2826,23 +2842,31 @@ class RotaAplicacaoManager {
         // Desbloquear input
         inputSeq.removeAttribute('readonly');
         
-        // Contar números de sequência USADOS por esse aplicador (híbrido: BD + TELA)
+        // Contar números de sequência USADOS por esse aplicador em TODOS os carros
         const numerosUsados = [];
         
-        desmontados.forEach(v => {
+        vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // Pegar aplicador da TELA (pode ter sido alterado mas não salvo)
+            // Verificar se esse carro pertence ao aplicador
+            if (v.aplicador === novoAplicador && v.sequenciaAplicacao) {
+                numerosUsados.push(v.sequenciaAplicacao);
+            }
+        });
+        
+        // TAMBÉM verificar carros na tela (não salvos ainda)
+        const desmontados = vehicles.filter(v => v.status === 'desmontado');
+        desmontados.forEach(v => {
+            if (v.id === vehicleId) return;
+            
             const appSelect = document.getElementById(`app_${v.id}`);
             const aplicadorAtual = appSelect ? appSelect.value : v.aplicador;
             
-            // Se é do mesmo aplicador que estamos verificando
             if (aplicadorAtual === novoAplicador) {
-                // Pegar número da TELA (pode ter sido alterado)
                 const seqInput = document.getElementById(`seq_${v.id}`);
                 const numero = seqInput ? parseInt(seqInput.value) : v.sequenciaAplicacao;
                 
-                if (numero) {
+                if (numero && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -2853,6 +2877,8 @@ class RotaAplicacaoManager {
         
         // Sugerir próximo número
         inputSeq.value = maiorNumero + 1;
+        
+        console.log(`🔢 ${novoAplicador}: sequências usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -2934,13 +2960,17 @@ class RotaAplicacaoManager {
 class RotaMontagemManager {
     static loadRota() {
         const vehicles = DB.getVehicles();
-        const aplicados = vehicles.filter(v => v.status === 'aplicado');
+        // Filtrar: aplicados E sem rota de montagem atribuída ainda
+        const aplicados = vehicles.filter(v => 
+            v.status === 'aplicado' && 
+            !v.rotaMontagem // Só mostra se NÃO tem rota montagem
+        );
         const team = DB.getTeam();
         
         const list = document.getElementById('rotaMontagemList');
         
         if (aplicados.length === 0) {
-            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo aplicado aguardando montagem!</p></div>';
+            list.innerHTML = '<div class="empty-state"><p>✅ Nenhum veículo pendente de atribuição!</p></div>';
             return;
         }
         
@@ -3010,7 +3040,6 @@ class RotaMontagemManager {
     
     static recalcularRota(vehicleId) {
         const vehicles = DB.getVehicles();
-        const aplicados = vehicles.filter(v => v.status === 'aplicado');
         
         // Pegar montador selecionado NO DOM
         const montadorSelect = document.getElementById(`montMont_${vehicleId}`);
@@ -3028,23 +3057,31 @@ class RotaMontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador (híbrido: BD + TELA)
+        // Contar números de rota USADOS por esse montador em TODOS os carros
         const numerosUsados = [];
         
-        aplicados.forEach(v => {
+        vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // Pegar montador da TELA (pode ter sido alterado mas não salvo)
+            // Verificar se esse carro pertence ao montador E tem rota montagem
+            if (v.montador === novoMontador && v.rotaMontagem) {
+                numerosUsados.push(v.rotaMontagem);
+            }
+        });
+        
+        // TAMBÉM verificar carros na tela (não salvos ainda)
+        const aplicados = vehicles.filter(v => v.status === 'aplicado');
+        aplicados.forEach(v => {
+            if (v.id === vehicleId) return;
+            
             const montSelect = document.getElementById(`montMont_${v.id}`);
             const montadorAtual = montSelect ? montSelect.value : v.montador;
             
-            // Se é do mesmo montador que estamos verificando
             if (montadorAtual === novoMontador) {
-                // Pegar número da TELA (pode ter sido alterado)
                 const rotaInput = document.getElementById(`rotaMont_${v.id}`);
                 const numero = rotaInput ? parseInt(rotaInput.value) : v.rotaMontagem;
                 
-                if (numero) {
+                if (numero && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -3055,6 +3092,8 @@ class RotaMontagemManager {
         
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
+        
+        console.log(`🔢 ${novoMontador}: rotas montagem usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
