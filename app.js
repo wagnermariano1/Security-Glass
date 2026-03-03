@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v16.1 - OCR Inteligente + Senhas no Firebase
+// Security Glass App - Main JavaScript v16.2 - BUG CRÍTICO CORRIGIDO!
 // Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
 
-console.log('🔥 Security Glass v16.1 - OCR + Senhas Firebase!');
+console.log('🔥 Security Glass v16.2 - CADASTRO CORRIGIDO!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1550,6 +1550,11 @@ class VehicleForm {
         
         vehicles.unshift(newVehicle);
         DB.saveVehicles(vehicles);
+        
+        // Salvar no Firebase também
+        if (window.firebase && FirebaseDB.initialized) {
+            FirebaseDB.saveVehicle(newVehicle);
+        }
         
         const concessionarias = DB.getConcessionarias();
         if (!concessionarias.includes(concessionaria) && concessionaria) {
