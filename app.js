@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.1 - VALIDAÇÃO POR MONTADOR CORRIGIDA + EQUIPE FIREBASE!
+// Security Glass App - Main JavaScript v19.2 - LOGIN DINÂMICO!
 // Cada montador tem numeração independente - Rafael 1-6, Arthur 1-3, Vinicius 1-2 = OK!
 
-console.log('🔥 Security Glass v19.1 - Validação Corrigida + Equipe!');
+console.log('🔥 Security Glass v19.2 - Login Dinâmico!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -422,6 +422,27 @@ const Utils = {
 // Sistema de Autenticação com Senha
 class AuthSystem {
     static init() {
+        // Popular lista de usuários dinamicamente
+        const userSelect = document.getElementById('userSelect');
+        if (userSelect) {
+            const team = DB.getTeam();
+            const options = [];
+            
+            options.push('<option value="wagner">Wagner (Gestor)</option>');
+            options.push('<option value="vinicius">Vinicius (Gerente)</option>');
+            
+            team.montadores.forEach(name => {
+                const username = name.toLowerCase().replace(/\s+/g, '');
+                options.push(`<option value="${username}">${name} (Montador)</option>`);
+            });
+            
+            team.aplicadores.forEach(name => {
+                const username = name.toLowerCase().replace(/\s+/g, '');
+                options.push(`<option value="${username}">${name} (Aplicador)</option>`);
+            });
+            
+            userSelect.innerHTML = options.join('');
+        }
         const loginForm = document.getElementById('loginForm');
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
