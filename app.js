@@ -1,5 +1,5 @@
 // Security Glass App - Main JavaScript v19.3 - LOGIN E SENHA DINÂMICOS!
-// Adiciona qualquer montador/aplicador → login automático com senha 1111111!
+// Adiciona qualquer montador/aplicador → login automático com senha 11111111 (8 uns)!
 
 console.log('🔥 Security Glass v19.3 - Login e Senha Dinâmicos!');
 
@@ -487,10 +487,10 @@ class AuthSystem {
             
             if (memberExists) {
                 // Usuário novo da equipe - senha padrão
-                if (password === '1111111') {
+                if (password === '11111111') {
                     console.log(`✅ Login com senha padrão: ${username}`);
                 } else {
-                    alert('Senha incorreta! Para novos usuários, use: 1111111');
+                    alert('Senha incorreta! Para novos usuários, use: 11111111');
                     passwordInput.value = '';
                     return;
                 }
