@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.2 - LOGIN DINÂMICO!
-// Cada montador tem numeração independente - Rafael 1-6, Arthur 1-3, Vinicius 1-2 = OK!
+// Security Glass App - Main JavaScript v19.3 - LOGIN E SENHA DINÂMICOS!
+// Adiciona qualquer montador/aplicador → login automático com senha 1111111!
 
-console.log('🔥 Security Glass v19.2 - Login Dinâmico!');
+console.log('🔥 Security Glass v19.3 - Login e Senha Dinâmicos!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -443,6 +443,7 @@ class AuthSystem {
             
             userSelect.innerHTML = options.join('');
         }
+        
         const loginForm = document.getElementById('loginForm');
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -473,7 +474,31 @@ class AuthSystem {
         
         const passwords = await DB.getPasswords();
         
-        if (passwords[username] !== password) {
+        // Se usuário não está nas senhas cadastradas, verificar se é membro da equipe
+        if (!passwords[username]) {
+            const team = DB.getTeam();
+            const allMembers = [...team.montadores, ...team.aplicadores];
+            
+            // Verificar se username corresponde a algum membro
+            const memberExists = allMembers.some(name => {
+                const memberUsername = name.toLowerCase().replace(/\s+/g, '');
+                return memberUsername === username;
+            });
+            
+            if (memberExists) {
+                // Usuário novo da equipe - senha padrão
+                if (password === '1111111') {
+                    console.log(`✅ Login com senha padrão: ${username}`);
+                } else {
+                    alert('Senha incorreta! Para novos usuários, use: 1111111');
+                    passwordInput.value = '';
+                    return;
+                }
+            } else {
+                alert('Usuário não encontrado!');
+                return;
+            }
+        } else if (passwords[username] !== password) {
             alert('Senha incorreta!');
             passwordInput.value = '';
             return;
