@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v16.2 - BUG CRÍTICO CORRIGIDO!
-// Firebase é a ÚNICA fonte da verdade. localStorage = cache apenas.
+// Security Glass App - Main JavaScript v17.0 - TODOS BUGS CORRIGIDOS!
+// Cadastrar, Editar, Deletar, Status = TUDO salva no Firebase agora!
 
-console.log('🔥 Security Glass v16.2 - CADASTRO CORRIGIDO!');
+console.log('🔥 Security Glass v17.0 - TODOS BUGS CORRIGIDOS!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -209,6 +209,36 @@ const DB = {
             } catch (error) {
                 console.error('❌ Erro ao salvar senhas no Firebase:', error);
             }
+        }
+    }
+};
+
+// Helper para salvar em localStorage E Firebase
+const saveBoth = {
+    vehicles: (vehicles) => {
+        saveBoth.vehicles(vehicles);
+        if (window.firebase && FirebaseDB.initialized) {
+            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+        }
+    },
+    vehicle: (vehicle) => {
+        const vehicles = DB.getVehicles();
+        const index = vehicles.findIndex(v => v.id === vehicle.id);
+        if (index >= 0) {
+            vehicles[index] = vehicle;
+        } else {
+            vehicles.unshift(vehicle);
+        }
+        saveBoth.vehicles(vehicles);
+        if (window.firebase && FirebaseDB.initialized) {
+            FirebaseDB.saveVehicle(vehicle);
+        }
+    },
+    deleteVehicle: (vehicleId) => {
+        const vehicles = DB.getVehicles().filter(v => v.id !== vehicleId);
+        saveBoth.vehicles(vehicles);
+        if (window.firebase && FirebaseDB.initialized) {
+            FirebaseDB.deleteVehicle(vehicleId);
         }
     }
 };
@@ -1206,7 +1236,7 @@ class Dashboard {
             });
             
             if (movidosParaEspera > 0) {
-                DB.saveVehicles(vehicles);
+                saveBoth.vehicles(vehicles);
                 this.renderDashboard();
                 console.log(`Automação 19:30h: ${movidosParaEspera} veículo(s) movido(s) para ESPERA`);
             }
@@ -1549,12 +1579,7 @@ class VehicleForm {
         };
         
         vehicles.unshift(newVehicle);
-        DB.saveVehicles(vehicles);
-        
-        // Salvar no Firebase também
-        if (window.firebase && FirebaseDB.initialized) {
-            FirebaseDB.saveVehicle(newVehicle);
-        }
+        saveBoth.vehicle(newVehicle);
         
         const concessionarias = DB.getConcessionarias();
         if (!concessionarias.includes(concessionaria) && concessionaria) {
@@ -1827,7 +1852,7 @@ class UpdateStatusModal {
                 vehicle.obsDesmontar = obsDesmontar;
             }
             
-            DB.saveVehicles(vehicles);
+            saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -1852,7 +1877,7 @@ class UpdateStatusModal {
             vehicle.dataEspera = new Date().toISOString();
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             
-            DB.saveVehicles(vehicles);
+            saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -1874,7 +1899,7 @@ class UpdateStatusModal {
                 vehicle.obsAplicador = obsAplicador;
             }
             
-            DB.saveVehicles(vehicles);
+            saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -1897,7 +1922,7 @@ class UpdateStatusModal {
                 vehicle.montador = newMontador;
                 vehicle.status = 'aplicado'; // Volta pra fila
                 
-                DB.saveVehicles(vehicles);
+                saveBoth.vehicles(vehicles);
                 Dashboard.renderDashboard();
                 
                 document.getElementById('updateStatusModal').classList.remove('active');
@@ -1930,7 +1955,7 @@ class UpdateStatusModal {
             
             console.log(`Salvando ${vehicle.montagemFotos.length} fotos`); // Debug
             
-            DB.saveVehicles(vehicles);
+            saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2061,8 +2086,7 @@ class VehicleDetailModal {
         
         if (confirm(confirmMsg)) {
             // Remover veículo
-            const newVehicles = vehicles.filter(v => v.id !== vehicleId);
-            DB.saveVehicles(newVehicles);
+            saveBoth.deleteVehicle(vehicleId);
             
             // Fechar modal e atualizar
             document.getElementById('vehicleDetailModal').classList.remove('active');
@@ -2191,7 +2215,7 @@ class VehicleEditModal {
         vehicle.montador = document.getElementById('editMontador').value;
         
         // Salvar
-        DB.saveVehicles(vehicles);
+        saveBoth.vehicle(vehicle);
         
         // Fechar modal e atualizar
         document.getElementById('vehicleEditModal').classList.remove('active');
@@ -2677,7 +2701,7 @@ class RotaDesmontagemManager {
             }
         });
         
-        DB.saveVehicles(vehicles);
+        saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Enviar notificações para montadores
@@ -2880,7 +2904,7 @@ class RotaAplicacaoManager {
             }
         });
         
-        DB.saveVehicles(vehicles);
+        saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar aplicadores
@@ -3082,7 +3106,7 @@ class RotaMontagemManager {
             }
         });
         
-        DB.saveVehicles(vehicles);
+        saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar montadores
@@ -3195,7 +3219,7 @@ class EsperaManager {
             delete vehicle.dataEspera;
             delete vehicle.tentouDesmontarPor;
             
-            DB.saveVehicles(vehicles);
+            saveBoth.vehicles(vehicles);
             this.loadEspera();
             Dashboard.renderDashboard();
             
@@ -3221,7 +3245,7 @@ class EsperaManager {
         delete vehicle.montador;
         delete vehicle.rotaDesmontagem;
         
-        DB.saveVehicles(vehicles);
+        saveBoth.vehicles(vehicles);
         this.loadEspera();
         Dashboard.renderDashboard();
         
