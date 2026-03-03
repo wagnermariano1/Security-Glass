@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.0 - VALIDAÇÃO POR MONTADOR CORRIGIDA!
+// Security Glass App - Main JavaScript v19.1 - VALIDAÇÃO POR MONTADOR CORRIGIDA + EQUIPE FIREBASE!
 // Cada montador tem numeração independente - Rafael 1-6, Arthur 1-3, Vinicius 1-2 = OK!
 
-console.log('🔥 Security Glass v19.0 - Validação Corrigida!');
+console.log('🔥 Security Glass v19.1 - Validação Corrigida + Equipe!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2477,7 +2477,7 @@ class TeamManager {
         `).join('');
     }
 
-    static addMember(role) {
+    static async addMember(role) {
         const name = prompt(`Nome do ${role === 'aplicador' ? 'Aplicador' : 'Montador'}:`);
         if (!name) return;
         
@@ -2494,11 +2494,12 @@ class TeamManager {
         }
         
         DB.saveTeam(team);
+        await FirebaseDB.saveTeam(team);
         this.loadTeam();
         Dashboard.loadTeamMembers();
     }
 
-    static removeMember(role, name) {
+    static async removeMember(role, name) {
         if (!confirm(`Remover ${name}?`)) return;
         
         const team = DB.getTeam();
@@ -2510,6 +2511,7 @@ class TeamManager {
         }
         
         DB.saveTeam(team);
+        await FirebaseDB.saveTeam(team);
         this.loadTeam();
         Dashboard.loadTeamMembers();
     }
