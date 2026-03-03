@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v18.2 - VALIDAÇÃO COMPLETA CONTRA HISTÓRICO!
-// Sistema sugere próximo número considerando TODAS as rotas existentes!
+// Security Glass App - Main JavaScript v19.0 - VALIDAÇÃO POR MONTADOR CORRIGIDA!
+// Cada montador tem numeração independente - Rafael 1-6, Arthur 1-3, Vinicius 1-2 = OK!
 
-console.log('🔥 Security Glass v18.2 - Validação Completa!');
+console.log('🔥 Security Glass v19.0 - Validação Corrigida!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2669,37 +2669,58 @@ class RotaDesmontagemManager {
         const vehicles = DB.getVehicles();
         const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         
-        // VALIDAR: verificar números duplicados por montador
-        const rotasPorMontador = {};
+        // VALIDAR: verificar números duplicados POR MONTADOR (cada um separado!)
         let temDuplicado = false;
         let mensagemErro = '';
         
-        cadastrados.forEach(v => {
-            const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
+        // Pegar lista de montadores únicos na tela
+        const montadoresNaTela = [...new Set(cadastrados.map(v => {
             const montSelect = document.getElementById(`montDesm_${v.id}`);
+            return montSelect ? montSelect.value : null;
+        }).filter(Boolean))];
+        
+        // Validar CADA MONTADOR separadamente
+        for (const montador of montadoresNaTela) {
+            // 1. Buscar rotas JÁ SALVAS desse montador específico
+            const rotasExistentes = vehicles
+                .filter(v => v.montador === montador && v.rotaDesmontagem)
+                .map(v => v.rotaDesmontagem);
             
-            if (rotaInput && montSelect) {
-                const rota = parseInt(rotaInput.value);
-                const montador = montSelect.value;
+            // 2. Buscar rotas NOVAS na tela desse montador
+            const rotasNovas = [];
+            for (const v of cadastrados) {
+                const montSelect = document.getElementById(`montDesm_${v.id}`);
+                const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
                 
-                if (!rotasPorMontador[montador]) {
-                    rotasPorMontador[montador] = [];
+                if (montSelect && montSelect.value === montador && rotaInput && rotaInput.value) {
+                    const rota = parseInt(rotaInput.value);
+                    
+                    // Verifica se conflita com rotas JÁ SALVAS
+                    if (rotasExistentes.includes(rota)) {
+                        temDuplicado = true;
+                        mensagemErro = `❌ ${montador} já tem Rota ${rota} salva!\n\nRotas existentes de ${montador}: ${rotasExistentes.sort((a,b) => a-b).join(', ')}`;
+                        break;
+                    }
+                    
+                    // Verifica se está repetido na própria tela
+                    if (rotasNovas.includes(rota)) {
+                        temDuplicado = true;
+                        mensagemErro = `❌ ${montador} tem Rota ${rota} repetida na tela!`;
+                        break;
+                    }
+                    
+                    rotasNovas.push(rota);
                 }
-                
-                // Verificar se já existe esse número para esse montador
-                if (rotasPorMontador[montador].includes(rota)) {
-                    temDuplicado = true;
-                    mensagemErro = `❌ Erro: O montador ${montador} tem o número ${rota} repetido!\n\nCada montador deve ter números únicos na sua rota.`;
-                }
-                
-                rotasPorMontador[montador].push(rota);
             }
-        });
+            
+            if (temDuplicado) break;
+        }
         
         if (temDuplicado) {
             alert(mensagemErro);
             return;
         }
+        
         
         // Se passou na validação, salvar
         let saved = 0;
@@ -2889,18 +2910,6 @@ class RotaAplicacaoManager {
         const rotasPorAplicador = {};
         let temDuplicado = false;
         let mensagemErro = '';
-        
-        // PRIMEIRO: Carregar sequências JÁ EXISTENTES no banco
-        vehicles.forEach(v => {
-            if (v.aplicador && v.sequenciaAplicacao) {
-                if (!rotasPorAplicador[v.aplicador]) {
-                    rotasPorAplicador[v.aplicador] = [];
-                }
-                rotasPorAplicador[v.aplicador].push(v.sequenciaAplicacao);
-            }
-        });
-        
-        // SEGUNDO: Verificar se os novos conflitam com existentes
         
         desmontados.forEach(v => {
             const seqInput = document.getElementById(`seq_${v.id}`);
@@ -3116,18 +3125,6 @@ class RotaMontagemManager {
         const rotasPorMontador = {};
         let temDuplicado = false;
         let mensagemErro = '';
-        
-        // PRIMEIRO: Carregar rotas JÁ EXISTENTES no banco
-        vehicles.forEach(v => {
-            if (v.montador && v.rotaMontagem) {
-                if (!rotasPorMontador[v.montador]) {
-                    rotasPorMontador[v.montador] = [];
-                }
-                rotasPorMontador[v.montador].push(v.rotaMontagem);
-            }
-        });
-        
-        // SEGUNDO: Verificar se os novos conflitam com existentes
         
         aplicados.forEach(v => {
             const rotaInput = document.getElementById(`rotaMont_${v.id}`);
