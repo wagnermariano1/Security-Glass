@@ -220,5 +220,3 @@ Sistema desenvolvido exclusivamente para Security Glass - Uso interno.
 ---
 
 **Desenvolvido para otimizar o controle de operações da Security Glass** 🛡️
-
-

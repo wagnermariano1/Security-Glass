@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v17.0 - TODOS BUGS CORRIGIDOS!
+// Security Glass App - Main JavaScript v17.1 - RECURSÃO CORRIGIDA!
 // Cadastrar, Editar, Deletar, Status = TUDO salva no Firebase agora!
 
-console.log('🔥 Security Glass v17.0 - TODOS BUGS CORRIGIDOS!');
+console.log('🔥 Security Glass v17.1 - RECURSÃO CORRIGIDA!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -216,7 +216,7 @@ const DB = {
 // Helper para salvar em localStorage E Firebase
 const saveBoth = {
     vehicles: (vehicles) => {
-        saveBoth.vehicles(vehicles);
+        DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
             vehicles.forEach(v => FirebaseDB.saveVehicle(v));
         }
@@ -229,14 +229,14 @@ const saveBoth = {
         } else {
             vehicles.unshift(vehicle);
         }
-        saveBoth.vehicles(vehicles);
+        DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
             FirebaseDB.saveVehicle(vehicle);
         }
     },
     deleteVehicle: (vehicleId) => {
         const vehicles = DB.getVehicles().filter(v => v.id !== vehicleId);
-        saveBoth.vehicles(vehicles);
+        DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
             FirebaseDB.deleteVehicle(vehicleId);
         }
