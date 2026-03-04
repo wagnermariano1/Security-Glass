@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.5 - SINCRONIZAÇÃO SEGURA!
-// Auto-limpa cache + Firebase = fonte verdade + Automação 18:40h!
+// Security Glass App - Main JavaScript v19.6 - TROCAR SENHA DINÂMICA!
+// Auto-limpa cache + Firebase primeiro + Trocar senha para todos membros!
 
-console.log('🔥 Security Glass v19.5 - Sincronização Segura!');
+console.log('🔥 Security Glass v19.6 - Trocar Senha Dinâmica!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -731,6 +731,28 @@ class AuthSystem {
     static showChangePasswordModal() {
         const modal = document.getElementById('changePasswordModal');
         modal.classList.add('active');
+        
+        // Popular lista de usuários dinamicamente
+        const userSelect = document.getElementById('changePasswordUser');
+        if (userSelect) {
+            const team = DB.getTeam();
+            const options = ['<option value="">Selecione...</option>'];
+            
+            options.push('<option value="wagner">Wagner (Gestor)</option>');
+            options.push('<option value="vinicius">Vinicius (Gerente)</option>');
+            
+            team.montadores.forEach(name => {
+                const username = name.toLowerCase().replace(/\s+/g, '');
+                options.push(`<option value="${username}">${name} (Montador)</option>`);
+            });
+            
+            team.aplicadores.forEach(name => {
+                const username = name.toLowerCase().replace(/\s+/g, '');
+                options.push(`<option value="${username}">${name} (Aplicador)</option>`);
+            });
+            
+            userSelect.innerHTML = options.join('');
+        }
         
         const form = document.getElementById('changePasswordForm');
         form.onsubmit = (e) => {
@@ -3769,7 +3791,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v19.5';
+    const VERSAO_ATUAL = 'v19.6';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
