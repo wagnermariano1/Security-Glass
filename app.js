@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.7 - TROCAR SENHA PARA NOVOS MEMBROS!
-// Membros novos podem trocar senha padrão 11111111 para senha personalizada!
+// Security Glass App - Main JavaScript v20.0 - RELATÓRIOS COM PERÍODOS!
+// Gran Finale! Relatórios filtrados por período + CSV ordenado por data!
 
-console.log('🔥 Security Glass v19.7 - Trocar Senha Completa!');
+console.log('🔥 Security Glass v20.0 - Relatórios Completos!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2478,6 +2478,64 @@ class ReportsManager {
         const team = DB.getTeam();
         const content = document.getElementById('reportContent');
         
+        // NOVA INTERFACE COM FILTROS
+        let html = `
+            <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 2px solid #3b82f6;">
+                <h3 style="margin: 0 0 20px 0; color: #1e40af;">📊 Gerar Relatório com Filtros</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #475569;">Tipo de Relatório:</label>
+                        <select id="reportType" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1rem;">
+                            <option value="finalizados">Carros Finalizados</option>
+                            <option value="andamento">Carros em Andamento</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #475569;">Período:</label>
+                        <select id="reportPeriod" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1rem;" onchange="ReportsManager.toggleCustomDates()">
+                            <option value="hoje">Hoje</option>
+                            <option value="semana">Esta Semana</option>
+                            <option value="mes">Este Mês</option>
+                            <option value="ano">Este Ano</option>
+                            <option value="personalizado">Personalizado</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="customDatesDiv" style="display: none; margin-bottom: 20px; padding: 16px; background: #f1f5f9; border-radius: 6px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #475569;">De:</label>
+                            <input type="date" id="startDate" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #475569;">Até:</label>
+                            <input type="date" id="endDate" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="ReportsManager.generateFilteredCSV()" style="width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 1.3rem;">📥</span>
+                    Gerar e Baixar CSV
+                </button>
+            </div>
+            
+            <hr style="margin: 32px 0; border: none; border-top: 2px solid #e2e8f0;">
+            
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 12px 0; color: #64748b;">💾 Relatório Geral (Todos os Carros)</h3>
+                <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.95rem;">Baixe o CSV completo com todos os veículos cadastrados no sistema.</p>
+                <button onclick="ReportsManager.generateFullCSV()" style="padding: 12px 24px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    📥 Baixar CSV Completo
+                </button>
+            </div>
+            
+            <h3 style="margin: 32px 0 16px 0;">Relatório do Mês Atual - ${Utils.getCurrentMonth()}</h3>
+        `;
+        
         const finalizados = vehicles.filter(v => 
             v.status === 'montado' && Utils.isCurrentMonth(v.montagemData)
         );
@@ -2504,8 +2562,7 @@ class ReportsManager {
             }
         });
         
-        let html = `
-            <h3>Relatório do Mês - ${Utils.getCurrentMonth()}</h3>
+        html += `
             <p style="margin: 16px 0;">Total de veículos finalizados: <strong>${finalizados.length}</strong></p>
             
             <table class="report-table">
@@ -2620,6 +2677,350 @@ class ReportsManager {
         
         // Limpar URL após download
         setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+    
+    static toggleCustomDates() {
+        const period = document.getElementById('reportPeriod').value;
+        const customDiv = document.getElementById('customDatesDiv');
+        customDiv.style.display = period === 'personalizado' ? 'block' : 'none';
+    }
+    
+    static getDateRange() {
+        const period = document.getElementById('reportPeriod').value;
+        const now = new Date();
+        let startDate, endDate;
+        
+        if (period === 'hoje') {
+            startDate = new Date(now.setHours(0, 0, 0, 0));
+            endDate = new Date(now.setHours(23, 59, 59, 999));
+        } else if (period === 'semana') {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Segunda-feira
+            startDate = new Date(now.setDate(diff));
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+        } else if (period === 'mes') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        } else if (period === 'ano') {
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        } else if (period === 'personalizado') {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            
+            if (!start || !end) {
+                alert('Por favor, selecione as datas inicial e final!');
+                return null;
+            }
+            
+            startDate = new Date(start + 'T00:00:00');
+            endDate = new Date(end + 'T23:59:59');
+        }
+        
+        return { startDate, endDate };
+    }
+    
+    static generateFilteredCSV() {
+        const reportType = document.getElementById('reportType').value;
+        const dateRange = this.getDateRange();
+        
+        if (!dateRange) return;
+        
+        const { startDate, endDate } = dateRange;
+        const vehicles = DB.getVehicles();
+        
+        let filtered = [];
+        let csvData = '';
+        
+        if (reportType === 'finalizados') {
+            // Carros Finalizados
+            filtered = vehicles.filter(v => {
+                if (v.status !== 'montado' || !v.montagemData) return false;
+                const dataFinal = new Date(v.montagemData);
+                return dataFinal >= startDate && dataFinal <= endDate;
+            });
+            
+            // Ordenar por data de finalização (mais antigo primeiro)
+            filtered.sort((a, b) => new Date(a.montagemData) - new Date(b.montagemData));
+            
+            // CSV Header
+            csvData = '\uFEFF'; // BOM UTF-8
+            csvData += 'Data Finalização;Nº;Modelo;Chassi;Concessionária;Local;Data Cadastro;Dias Total;Montador;Aplicador\n';
+            
+            // Dados
+            filtered.forEach((v, idx) => {
+                const dataFinal = Utils.formatDate(v.montagemData);
+                const numero = idx + 1;
+                const modelo = (v.modelo || '-').replace(/;/g, ',');
+                const chassi = (v.chassi || '-').replace(/;/g, ',');
+                const conc = (v.concessionaria || '-').replace(/;/g, ',');
+                const local = (v.local || '-').replace(/;/g, ',');
+                const dataCad = v.cadastroData ? Utils.formatDate(v.cadastroData) : '-';
+                
+                // Calcular dias total
+                const dias = v.cadastroData && v.montagemData ? 
+                    Math.ceil((new Date(v.montagemData) - new Date(v.cadastroData)) / (1000 * 60 * 60 * 24)) : '-';
+                
+                const montador = v.montadoPor || v.montador || '-';
+                const aplicador = v.aplicadoPor || v.aplicador || '-';
+                
+                csvData += `${dataFinal};${numero};${modelo};${chassi};${conc};${local};${dataCad};${dias};${montador};${aplicador}\n`;
+            });
+            
+        } else {
+            // Carros em Andamento
+            filtered = vehicles.filter(v => {
+                if (v.status === 'montado' || !v.cadastroData) return false;
+                const dataCad = new Date(v.cadastroData);
+                return dataCad >= startDate && dataCad <= endDate;
+            });
+            
+            // Ordenar por data de cadastro (mais antigo primeiro)
+            filtered.sort((a, b) => new Date(a.cadastroData) - new Date(b.cadastroData));
+            
+            // CSV Header
+            csvData = '\uFEFF';
+            csvData += 'Data Cadastro;Nº;Modelo;Chassi;Concessionária;Local;Status;Dias em Processo;Montador;Aplicador\n';
+            
+            // Dados
+            filtered.forEach((v, idx) => {
+                const dataCad = Utils.formatDate(v.cadastroData);
+                const numero = idx + 1;
+                const modelo = (v.modelo || '-').replace(/;/g, ',');
+                const chassi = (v.chassi || '-').replace(/;/g, ',');
+                const conc = (v.concessionaria || '-').replace(/;/g, ',');
+                const local = (v.local || '-').replace(/;/g, ',');
+                const status = v.status || '-';
+                
+                // Calcular dias em processo
+                const dias = v.cadastroData ? 
+                    Math.ceil((new Date() - new Date(v.cadastroData)) / (1000 * 60 * 60 * 24)) : '-';
+                
+                const montador = v.montador || '-';
+                const aplicador = v.aplicador || '-';
+                
+                csvData += `${dataCad};${numero};${modelo};${chassi};${conc};${local};${status};${dias};${montador};${aplicador}\n`;
+            });
+        }
+        
+        if (filtered.length === 0) {
+            alert('Nenhum veículo encontrado no período selecionado!');
+            return;
+        }
+        
+        // Download
+        const period = document.getElementById('reportPeriod').value;
+        const tipo = reportType === 'finalizados' ? 'finalizados' : 'em-andamento';
+        const filename = `relatorio-${tipo}-${period}-${Utils.formatDate(new Date())}.csv`;
+        
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+        
+        alert(`✅ Relatório gerado!\n\n${filtered.length} veículo(s) encontrado(s)\nArquivo: ${filename}`);
+    }
+    
+    static generateFullCSV() {
+        const vehicles = DB.getVehicles();
+        
+        // CSV completo de TODOS os carros
+        let csvData = '\uFEFF';
+        csvData += 'ID;Data Cadastro;Modelo;Chassi;Concessionária;Local;Status;Montador;Aplicador;Data Finalização\n';
+        
+        vehicles.forEach((v, idx) => {
+            const id = idx + 1;
+            const dataCad = v.cadastroData ? Utils.formatDate(v.cadastroData) : '-';
+            const modelo = (v.modelo || '-').replace(/;/g, ',');
+            const chassi = (v.chassi || '-').replace(/;/g, ',');
+            const conc = (v.concessionaria || '-').replace(/;/g, ',');
+            const local = (v.local || '-').replace(/;/g, ',');
+            const status = v.status || '-';
+            const montador = v.montador || '-';
+            const aplicador = v.aplicador || '-';
+            const dataFinal = v.montagemData ? Utils.formatDate(v.montagemData) : '-';
+            
+            csvData += `${id};${dataCad};${modelo};${chassi};${conc};${local};${status};${montador};${aplicador};${dataFinal}\n`;
+        });
+        
+        const filename = `relatorio-completo-${Utils.formatDate(new Date())}.csv`;
+        
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+        
+        alert(`✅ Relatório completo gerado!\n\n${vehicles.length} veículo(s) no total\nArquivo: ${filename}`);
+    }
+    
+    static toggleCustomDates() {
+        const period = document.getElementById('reportPeriod').value;
+        const customDiv = document.getElementById('customDatesDiv');
+        
+        if (period === 'personalizado') {
+            customDiv.style.display = 'block';
+        } else {
+            customDiv.style.display = 'none';
+        }
+    }
+    
+    static generateFilteredCSV() {
+        const reportType = document.getElementById('reportType').value;
+        const period = document.getElementById('reportPeriod').value;
+        
+        let startDate, endDate;
+        const now = new Date();
+        
+        // Calcular datas baseado no período
+        if (period === 'hoje') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        } else if (period === 'semana') {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Segunda-feira
+            startDate = new Date(now.setDate(diff));
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59);
+        } else if (period === 'mes') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        } else if (period === 'ano') {
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        } else if (period === 'personalizado') {
+            const startInput = document.getElementById('startDate').value;
+            const endInput = document.getElementById('endDate').value;
+            
+            if (!startInput || !endInput) {
+                alert('Por favor, selecione as datas de início e fim!');
+                return;
+            }
+            
+            startDate = new Date(startInput);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(endInput);
+            endDate.setHours(23, 59, 59);
+        }
+        
+        const vehicles = DB.getVehicles();
+        let filteredVehicles = [];
+        let csvData = '';
+        
+        if (reportType === 'finalizados') {
+            // Carros finalizados no período
+            filteredVehicles = vehicles.filter(v => {
+                if (v.status !== 'montado' || !v.montagemData) return false;
+                const dataFinal = new Date(v.montagemData);
+                return dataFinal >= startDate && dataFinal <= endDate;
+            });
+            
+            // Ordenar por data de finalização
+            filteredVehicles.sort((a, b) => new Date(a.montagemData) - new Date(b.montagemData));
+            
+            // Cabeçalho
+            csvData = 'Data Finalização;Nº;Modelo;Chassi;Concessionária;Local;Data Cadastro;Dias Total;Montador;Aplicador\n';
+            
+            // Dados
+            filteredVehicles.forEach((v, index) => {
+                const dataFinal = Utils.formatDate(v.montagemData);
+                const numero = index + 1;
+                const modelo = v.modelo || '-';
+                const chassi = v.chassi || '-';
+                const conc = v.concessionaria || '-';
+                const local = v.local || '-';
+                const dataCad = v.cadastroData ? Utils.formatDate(v.cadastroData) : '-';
+                
+                // Calcular dias total
+                let diasTotal = '-';
+                if (v.cadastroData && v.montagemData) {
+                    const inicio = new Date(v.cadastroData);
+                    const fim = new Date(v.montagemData);
+                    const diff = Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24));
+                    diasTotal = diff;
+                }
+                
+                const montador = v.montadoPor || v.montador || '-';
+                const aplicador = v.aplicadoPor || v.aplicador || '-';
+                
+                csvData += `${dataFinal};${numero};${modelo};${chassi};${conc};${local};${dataCad};${diasTotal};${montador};${aplicador}\n`;
+            });
+            
+        } else {
+            // Carros em andamento (cadastrados no período)
+            filteredVehicles = vehicles.filter(v => {
+                if (v.status === 'montado' || !v.cadastroData) return false;
+                const dataCad = new Date(v.cadastroData);
+                return dataCad >= startDate && dataCad <= endDate;
+            });
+            
+            // Ordenar por data de cadastro
+            filteredVehicles.sort((a, b) => new Date(a.cadastroData) - new Date(b.cadastroData));
+            
+            // Cabeçalho
+            csvData = 'Data Cadastro;Nº;Modelo;Chassi;Concessionária;Local;Status;Dias Processo;Montador;Aplicador\n';
+            
+            // Dados
+            filteredVehicles.forEach((v, index) => {
+                const dataCad = Utils.formatDate(v.cadastroData);
+                const numero = index + 1;
+                const modelo = v.modelo || '-';
+                const chassi = v.chassi || '-';
+                const conc = v.concessionaria || '-';
+                const local = v.local || '-';
+                const status = v.status || '-';
+                
+                // Calcular dias em processo
+                let diasProcesso = '-';
+                if (v.cadastroData) {
+                    const inicio = new Date(v.cadastroData);
+                    const hoje = new Date();
+                    const diff = Math.ceil((hoje - inicio) / (1000 * 60 * 60 * 24));
+                    diasProcesso = diff;
+                }
+                
+                const montador = v.montador || '-';
+                const aplicador = v.aplicador || '-';
+                
+                csvData += `${dataCad};${numero};${modelo};${chassi};${conc};${local};${status};${diasProcesso};${montador};${aplicador}\n`;
+            });
+        }
+        
+        if (filteredVehicles.length === 0) {
+            alert('⚠️ Nenhum veículo encontrado no período selecionado!');
+            return;
+        }
+        
+        // Gerar nome do arquivo
+        const tipoNome = reportType === 'finalizados' ? 'Finalizados' : 'EmAndamento';
+        const periodoNome = period === 'personalizado' 
+            ? `${Utils.formatDate(startDate)}-${Utils.formatDate(endDate)}`.replace(/\//g, '-')
+            : period;
+        const filename = `relatorio-${tipoNome}-${periodoNome}-${Utils.formatDate(new Date()).replace(/\//g, '-')}.csv`;
+        
+        // Download
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+        
+        alert(`✅ Relatório gerado!\n\n${filteredVehicles.length} veículo(s) encontrado(s)\nPeríodo: ${Utils.formatDate(startDate)} a ${Utils.formatDate(endDate)}\n\nArquivo: ${filename}`);
     }
 }
 
@@ -3814,7 +4215,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v19.7';
+    const VERSAO_ATUAL = 'v20.0';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
