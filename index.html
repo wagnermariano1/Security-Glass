@@ -228,72 +228,9 @@
 
                 <!-- Tab Relatórios -->
                 <div id="reportsTab" class="tab-content manager-only">
-                    <h3>📊 Relatórios com Filtros</h3>
-                    
-                    <div class="report-filters" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <div style="margin-bottom: 16px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Tipo de Relatório:</label>
-                            <div style="display: flex; gap: 16px;">
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportType" value="finalizados" checked>
-                                    <span>Carros Finalizados</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportType" value="andamento">
-                                    <span>Carros em Andamento</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-bottom: 16px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Período:</label>
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportPeriod" value="hoje" checked>
-                                    <span>📅 Hoje</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportPeriod" value="semana">
-                                    <span>📅 Esta semana</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportPeriod" value="mes">
-                                    <span>📅 Este mês</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportPeriod" value="ano">
-                                    <span>📅 Este ano</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="reportPeriod" value="personalizado">
-                                    <span>📅 Personalizado</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div id="customDateRange" style="display: none; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 6px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Período Personalizado:</label>
-                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">De:</label>
-                                    <input type="date" id="customStartDate" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Até:</label>
-                                    <input type="date" id="customEndDate" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button id="generateReportBtn" class="btn btn-primary" style="width: 100%;">🔽 Gerar CSV</button>
-                    </div>
-                    
-                    <div style="background: white; padding: 20px; border-radius: 8px;">
-                        <h4 style="margin-bottom: 12px;">💾 Relatório Geral (Todos os Carros)</h4>
-                        <p style="color: #64748b; margin-bottom: 12px; font-size: 0.9rem;">Exporta todos os carros cadastrados no sistema, sem filtros.</p>
-                        <button id="exportReportBtn" class="btn btn-secondary">🔽 Baixar CSV Completo</button>
-                    </div>
+                    <div id="reportContent"></div>
                 </div>
+
 
                 <!-- Tab Equipe -->
                 <div id="teamTab" class="tab-content manager-only">

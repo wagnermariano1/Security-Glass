@@ -2911,7 +2911,7 @@ class ReportsManager {
         
         // CSV completo de TODOS os carros
         let csvData = '\uFEFF';
-        csvData += 'ID;Data Cadastro;Modelo;Chassi;Concessionária;Local;Status;Montador;Aplicador;Data Finalização\n';
+        csvData += 'ID;Data Cadastro;Modelo;Chassi;Concessionária;Local;Status;Montador;Aplicador;Data Finalização;OBS\n';
         
         vehicles.forEach((v, idx) => {
             const id = idx + 1;
@@ -2924,8 +2924,9 @@ class ReportsManager {
             const montador = v.montador || '-';
             const aplicador = v.aplicador || '-';
             const dataFinal = v.montagemData ? Utils.formatDate(v.montagemData) : '-';
+            const obs = (v.observacoes || '-').replace(/;/g, ',').replace(/\n/g, ' ');
             
-            csvData += `${id};${dataCad};${modelo};${chassi};${conc};${local};${status};${montador};${aplicador};${dataFinal}\n`;
+            csvData += `${id};${dataCad};${modelo};${chassi};${conc};${local};${status};${montador};${aplicador};${dataFinal};${obs}\n`;
         });
         
         const filename = `relatorio-completo-${Utils.formatDate(new Date())}.csv`;
