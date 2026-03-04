@@ -2708,10 +2708,7 @@ class ReportsManager {
     }
     
     static getDateRange() {
-        // Pegar período do radio button
-        const periodRadio = document.querySelector('input[name="reportPeriod"]:checked');
-        const period = periodRadio ? periodRadio.value : 'hoje';
-        
+        const period = document.getElementById('reportPeriod').value;
         const now = new Date();
         let startDate, endDate;
         
@@ -2733,9 +2730,8 @@ class ReportsManager {
             startDate = new Date(now.getFullYear(), 0, 1);
             endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         } else if (period === 'personalizado') {
-            // Usar os novos IDs customStartDate e customEndDate
-            const start = document.getElementById('customStartDate').value;
-            const end = document.getElementById('customEndDate').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
             
             if (!start || !end) {
                 alert('Por favor, selecione as datas inicial e final!');
