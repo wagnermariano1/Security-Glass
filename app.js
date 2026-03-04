@@ -2500,6 +2500,11 @@ class ReportsManager {
         const team = DB.getTeam();
         const content = document.getElementById('reportContent');
         
+        if (!content) {
+            console.error('❌ reportContent não encontrado no DOM!');
+            return;
+        }
+        
         // NOVA INTERFACE COM FILTROS
         let html = `
             <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 2px solid #3b82f6;">
@@ -2812,9 +2817,9 @@ class ReportsManager {
             // Ordenar por data de finalização (mais antigo primeiro)
             filtered.sort((a, b) => new Date(a.montagemData) - new Date(b.montagemData));
             
-            // CSV Header - ORDEM: Data Finalização, Número, Concessionária, Local, Modelo, Mês, Chassi, Data Cadastro, Dias, Montador, Aplicador
+            // CSV Header - ORDEM: Data Finalização, Número, Concessionária, Local, Modelo, Mês, Chassi, Data Cadastro, Dias, Montador, Aplicador, OBS
             csvData = '\uFEFF'; // BOM UTF-8
-            csvData += 'Data Finalização;Número;Concessionária;Local;Modelo;Mês;Chassi;Data Cadastro;Dias Total;Montador;Aplicador\n';
+            csvData += 'Data Finalização;Número;Concessionária;Local;Modelo;Mês;Chassi;Data Cadastro;Dias Total;Montador;Aplicador;OBS\n';
             
             // Dados
             filtered.forEach((v, idx) => {
@@ -2833,8 +2838,9 @@ class ReportsManager {
                 
                 const montador = v.montadoPor || v.montador || '-';
                 const aplicador = v.aplicadoPor || v.aplicador || '-';
+                const obs = (v.observacoes || '-').replace(/;/g, ',').replace(/\n/g, ' ');
                 
-                csvData += `${dataFinal};${numero};${conc};${local};${modelo};${mes};${chassi};${dataCad};${dias};${montador};${aplicador}\n`;
+                csvData += `${dataFinal};${numero};${conc};${local};${modelo};${mes};${chassi};${dataCad};${dias};${montador};${aplicador};${obs}\n`;
             });
             
         } else {
@@ -2848,9 +2854,9 @@ class ReportsManager {
             // Ordenar por data de cadastro (mais antigo primeiro)
             filtered.sort((a, b) => new Date(a.cadastroData) - new Date(b.cadastroData));
             
-            // CSV Header - ORDEM: Data Cadastro, Número, Concessionária, Local, Modelo, Status, Chassi, Dias, Montador, Aplicador
+            // CSV Header - ORDEM: Data Cadastro, Número, Concessionária, Local, Modelo, Status, Chassi, Dias, Montador, Aplicador, OBS
             csvData = '\uFEFF';
-            csvData += 'Data Cadastro;Número;Concessionária;Local;Modelo;Status;Chassi;Dias em Processo;Montador;Aplicador\n';
+            csvData += 'Data Cadastro;Número;Concessionária;Local;Modelo;Status;Chassi;Dias em Processo;Montador;Aplicador;OBS\n';
             
             // Dados
             filtered.forEach((v, idx) => {
@@ -2868,8 +2874,9 @@ class ReportsManager {
                 
                 const montador = v.montador || '-';
                 const aplicador = v.aplicador || '-';
+                const obs = (v.observacoes || '-').replace(/;/g, ',').replace(/\n/g, ' ');
                 
-                csvData += `${dataCad};${numero};${conc};${local};${modelo};${status};${chassi};${dias};${montador};${aplicador}\n`;
+                csvData += `${dataCad};${numero};${conc};${local};${modelo};${status};${chassi};${dias};${montador};${aplicador};${obs}\n`;
             });
         }
         
