@@ -2516,12 +2516,12 @@ class ReportsManager {
                     
                     <div>
                         <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #475569;">Período:</label>
-                        <select id="reportPeriod" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1rem;" onchange="ReportsManager.toggleCustomDates()">
-                            <option value="hoje">Hoje</option>
-                            <option value="semana">Esta Semana</option>
-                            <option value="mes">Este Mês</option>
-                            <option value="ano">Este Ano</option>
-                            <option value="personalizado">Personalizado</option>
+                        <select id="reportPeriod" style="width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1rem;">
+                            <option value="hoje">📅 Hoje</option>
+                            <option value="semana">📅 Esta Semana</option>
+                            <option value="mes" selected>📅 Este Mês</option>
+                            <option value="ano">📅 Este Ano</option>
+                            <option value="personalizado">📅 Personalizado</option>
                         </select>
                     </div>
                 </div>
@@ -2657,6 +2657,12 @@ class ReportsManager {
         `;
         
         content.innerHTML = html;
+        
+        // Adicionar event listener para toggle de datas personalizadas
+        const periodSelect = document.getElementById('reportPeriod');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', () => this.toggleCustomDates());
+        }
     }
 
     static exportReport() {
