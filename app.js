@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.3 - LOGIN E SENHA DINÂMICOS!
-// Adiciona qualquer montador/aplicador → login automático com senha 11111111 (8 uns)!
+// Security Glass App - Main JavaScript v19.4 - AUTOMAÇÃO 18:40H CORRIGIDA!
+// Roda 1x por dia às 18:40h - não mexe em carros durante o dia!
 
-console.log('🔥 Security Glass v19.3 - Login e Senha Dinâmicos!');
+console.log('🔥 Security Glass v19.4 - Automação Corrigida!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1246,46 +1246,69 @@ class Dashboard {
         const hour = now.getHours();
         const minutes = now.getMinutes();
         
-        // Configuração: horário padrão 19:30h
-        const HORA_LIMITE = 19;
-        const MINUTO_LIMITE = 30;
+        // Configuração: horário 18:40h
+        const HORA_LIMITE = 18;
+        const MINUTO_LIMITE = 40;
         
-        // Se passou das 19:30h, verificar carros cadastrados não desmontados hoje
-        const passouHorario = (hour > HORA_LIMITE) || (hour === HORA_LIMITE && minutes >= MINUTO_LIMITE);
+        // Verificar se já rodou hoje
+        const hoje = now.toDateString();
+        const ultimaExecucao = localStorage.getItem('ultimaAutomacaoEspera');
         
-        if (passouHorario) {
-            const vehicles = DB.getVehicles();
-            const today = new Date().toDateString();
-            let movidosParaEspera = 0;
-            
-            vehicles.forEach(v => {
-                // Se está CADASTRADO e foi cadastrado HOJE
-                if (v.status === 'cadastrado' && v.cadastroData) {
-                    const cadastroDate = new Date(v.cadastroData);
-                    const cadastroDateStr = cadastroDate.toDateString();
-                    const cadastroHour = cadastroDate.getHours();
-                    const cadastroMinutes = cadastroDate.getMinutes();
+        if (ultimaExecucao === hoje) {
+            // Já rodou hoje, não roda de novo
+            return;
+        }
+        
+        // Só roda entre 18:40h e 18:50h (janela de 10 min)
+        const dentroJanela = (hour === HORA_LIMITE && minutes >= MINUTO_LIMITE && minutes < MINUTO_LIMITE + 10) ||
+                             (hour === HORA_LIMITE + 1 && minutes < 10);
+        
+        if (!dentroJanela) {
+            return; // Fora do horário
+        }
+        
+        // EXECUTAR AUTOMAÇÃO
+        const vehicles = DB.getVehicles();
+        const today = new Date().toDateString();
+        let movidosParaEspera = 0;
+        
+        vehicles.forEach(v => {
+            // Se está CADASTRADO e foi cadastrado HOJE
+            if (v.status === 'cadastrado' && v.cadastroData) {
+                const cadastroDate = new Date(v.cadastroData);
+                const cadastroDateStr = cadastroDate.toDateString();
+                const cadastroHour = cadastroDate.getHours();
+                const cadastroMinutes = cadastroDate.getMinutes();
+                
+                // Verificar se foi cadastrado ANTES das 18:40h
+                const cadastradoAntes = (cadastroHour < HORA_LIMITE) || (cadastroHour === HORA_LIMITE && cadastroMinutes < MINUTO_LIMITE);
+                
+                // Se foi cadastrado HOJE e ANTES das 18:40h (e ainda não desmontou)
+                if (cadastroDateStr === today && cadastradoAntes) {
+                    // Mover para ESPERA
+                    v.status = 'espera';
+                    v.motivoEspera = 'Não desmontado até 18:40h';
+                    v.dataEspera = new Date().toISOString();
+                    v.tentouDesmontarPor = 'Automação (Não tentou)';
                     
-                    // Verificar se foi cadastrado ANTES das 19:30h
-                    const cadastradoAntes = (cadastroHour < HORA_LIMITE) || (cadastroHour === HORA_LIMITE && cadastroMinutes < MINUTO_LIMITE);
+                    // Limpar montador e rota para reatribuir amanhã
+                    delete v.montador;
+                    delete v.rotaDesmontagem;
                     
-                    // Se foi cadastrado HOJE e ANTES das 19:30h (e ainda não desmontou)
-                    if (cadastroDateStr === today && cadastradoAntes) {
-                        // Mover para ESPERA
-                        v.status = 'espera';
-                        v.motivoEspera = 'Não desmontado até 19:30h';
-                        v.dataEspera = new Date().toISOString();
-                        v.tentouDesmontarPor = 'Automação (Não tentou)';
-                        movidosParaEspera++;
-                    }
+                    movidosParaEspera++;
                 }
-            });
-            
-            if (movidosParaEspera > 0) {
-                saveBoth.vehicles(vehicles);
-                this.renderDashboard();
-                console.log(`Automação 19:30h: ${movidosParaEspera} veículo(s) movido(s) para ESPERA`);
             }
+        });
+        
+        if (movidosParaEspera > 0) {
+            saveBoth.vehicles(vehicles);
+            this.renderDashboard();
+            
+            // Marcar que já rodou hoje
+            localStorage.setItem('ultimaAutomacaoEspera', hoje);
+            
+            console.log(`✅ Automação 18:40h executada: ${movidosParaEspera} veículo(s) movido(s) para ESPERA`);
+            alert(`⏰ Automação 18:40h\n\n${movidosParaEspera} veículo(s) não desmontado(s) foram movidos para ESPERA.\n\nRotas limpas para reatribuir amanhã!`);
         }
     }
 }
