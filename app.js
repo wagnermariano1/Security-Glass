@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.4 - AUTOMAÇÃO 18:40H CORRIGIDA!
-// Roda 1x por dia às 18:40h - não mexe em carros durante o dia!
+// Security Glass App - Main JavaScript v19.5 - SINCRONIZAÇÃO SEGURA!
+// Auto-limpa cache + Firebase = fonte verdade + Automação 18:40h!
 
-console.log('🔥 Security Glass v19.4 - Automação Corrigida!');
+console.log('🔥 Security Glass v19.5 - Sincronização Segura!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -84,6 +84,29 @@ const FirebaseDB = {
             }
         });
         
+        // Listener de equipe (team) com atualização em tempo real
+        const { doc, onSnapshot: onSnapshotDoc } = window.firebase;
+        onSnapshotDoc(doc(db, 'config', 'team'), (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const teamData = docSnapshot.data();
+                localStorage.setItem('team', JSON.stringify(teamData));
+                console.log('👥 Equipe sincronizada do Firebase!', teamData);
+                
+                // Atualizar lista de login se estiver na tela de login
+                if (typeof populateUserSelect === 'function' && document.getElementById('loginScreen').classList.contains('active')) {
+                    populateUserSelect();
+                }
+                
+                // Atualizar aba equipe se estiver aberta
+                if (document.getElementById('dashboardScreen').classList.contains('active')) {
+                    const currentTab = document.querySelector('.tab.active')?.dataset?.tab;
+                    if (currentTab === 'team') {
+                        TeamManager.loadTeam();
+                    }
+                }
+            }
+        });
+        
         console.log('🔄 Sincronização em tempo real ativada!');
     },
     
@@ -142,10 +165,42 @@ const DB = {
         }
     },
     
-    getTeam: () => JSON.parse(localStorage.getItem('team') || JSON.stringify({
-        aplicadores: ['Jonas', 'Maycon'],
-        montadores: ['Rafael', 'Vinicius', 'Arthur', 'Claiton']
-    })),
+    getTeam: () => {
+        // Tentar buscar do localStorage primeiro (mais rápido)
+        const cached = localStorage.getItem('team');
+        if (cached) {
+            return JSON.parse(cached);
+        }
+        
+        // Padrão inicial SEM Vinicius montador (será adicionado manualmente)
+        return {
+            aplicadores: ['Jonas', 'Maycon'],
+            montadores: ['Rafael', 'Arthur', 'Claiton']
+        };
+    },
+    
+    getTeamAsync: async () => {
+        // SEMPRE buscar do Firebase primeiro se disponível
+        if (FirebaseDB.initialized && window.firebase) {
+            try {
+                const { db, doc, getDoc } = window.firebase;
+                const teamDoc = await getDoc(doc(db, 'config', 'team'));
+                
+                if (teamDoc.exists()) {
+                    const teamData = teamDoc.data();
+                    // Atualizar localStorage com dados do Firebase
+                    localStorage.setItem('team', JSON.stringify(teamData));
+                    console.log('👥 Equipe carregada do Firebase');
+                    return teamData;
+                }
+            } catch (error) {
+                console.log('⚠️ Erro ao buscar equipe do Firebase:', error);
+            }
+        }
+        
+        // Fallback: localStorage
+        return DB.getTeam();
+    },
     saveTeam: (team) => {
         localStorage.setItem('team', JSON.stringify(team));
         if (FirebaseDB.initialized) {
@@ -2525,8 +2580,9 @@ class ReportsManager {
 
 // Gerenciador de Equipe
 class TeamManager {
-    static loadTeam() {
-        const team = DB.getTeam();
+    static async loadTeam() {
+        // Buscar do Firebase primeiro
+        const team = await DB.getTeamAsync();
         
         const aplicadoresList = document.getElementById('aplicadoresList');
         const montadoresList = document.getElementById('montadoresList');
@@ -3711,6 +3767,33 @@ document.addEventListener('DOMContentLoaded', () => {
 // Inicializar Firebase ao carregar página
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
+    
+    // Verificar versão e limpar cache se necessário
+    const VERSAO_ATUAL = 'v19.5';
+    const ultimaVersao = localStorage.getItem('appVersion');
+    
+    if (ultimaVersao !== VERSAO_ATUAL) {
+        console.log(`🔄 Nova versão detectada: ${ultimaVersao || 'primeira vez'} → ${VERSAO_ATUAL}`);
+        console.log('🧹 Limpando cache antigo automaticamente...');
+        
+        // Limpar TUDO exceto senhas e login
+        const keepKeys = ['passwords', 'currentUser', 'currentRole', 'currentUserFullName', 'rememberMe', 'rememberMeExpiry'];
+        const allKeys = Object.keys(localStorage);
+        
+        allKeys.forEach(key => {
+            if (!keepKeys.includes(key) && key !== 'appVersion') {
+                localStorage.removeItem(key);
+                console.log(`   🗑️ Removido: ${key}`);
+            }
+        });
+        
+        // Salvar nova versão
+        localStorage.setItem('appVersion', VERSAO_ATUAL);
+        
+        console.log(`✅ Cache limpo! App atualizado para ${VERSAO_ATUAL}`);
+        console.log('📡 Dados serão carregados do Firebase...');
+    }
+    
     await FirebaseDB.init();
     // NÃO inicializar notificações aqui - vai inicializar DEPOIS do login
     PushNotifications.setupForegroundListener();
