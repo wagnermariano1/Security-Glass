@@ -940,6 +940,28 @@ class Dashboard {
             ReportsManager.loadReport();
         });
 
+        // Botão gerar relatório com filtros
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        if (generateReportBtn) {
+            const newBtn = generateReportBtn.cloneNode(true);
+            generateReportBtn.parentNode.replaceChild(newBtn, generateReportBtn);
+            newBtn.addEventListener('click', () => {
+                ReportsManager.generateFilteredCSV();
+            });
+        }
+        
+        // Mostrar/ocultar data personalizada
+        document.querySelectorAll('input[name="reportPeriod"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const customDateRange = document.getElementById('customDateRange');
+                if (e.target.value === 'personalizado') {
+                    customDateRange.style.display = 'block';
+                } else {
+                    customDateRange.style.display = 'none';
+                }
+            });
+        });
+
         const exportBtn = document.getElementById('exportReportBtn');
         if (exportBtn) {
             // Remover listeners antigos
@@ -2686,7 +2708,10 @@ class ReportsManager {
     }
     
     static getDateRange() {
-        const period = document.getElementById('reportPeriod').value;
+        // Pegar período do radio button
+        const periodRadio = document.querySelector('input[name="reportPeriod"]:checked');
+        const period = periodRadio ? periodRadio.value : 'hoje';
+        
         const now = new Date();
         let startDate, endDate;
         
@@ -2708,8 +2733,9 @@ class ReportsManager {
             startDate = new Date(now.getFullYear(), 0, 1);
             endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         } else if (period === 'personalizado') {
-            const start = document.getElementById('startDate').value;
-            const end = document.getElementById('endDate').value;
+            // Usar os novos IDs customStartDate e customEndDate
+            const start = document.getElementById('customStartDate').value;
+            const end = document.getElementById('customEndDate').value;
             
             if (!start || !end) {
                 alert('Por favor, selecione as datas inicial e final!');
@@ -2724,7 +2750,10 @@ class ReportsManager {
     }
     
     static generateFilteredCSV() {
-        const reportType = document.getElementById('reportType').value;
+        // Pegar valores dos radio buttons
+        const reportTypeRadio = document.querySelector('input[name="reportType"]:checked');
+        const reportType = reportTypeRadio ? reportTypeRadio.value : 'finalizados';
+        
         const dateRange = this.getDateRange();
         
         if (!dateRange) return;
@@ -2746,18 +2775,19 @@ class ReportsManager {
             // Ordenar por data de finalização (mais antigo primeiro)
             filtered.sort((a, b) => new Date(a.montagemData) - new Date(b.montagemData));
             
-            // CSV Header
+            // CSV Header - ORDEM: Data Finalização, Número, Concessionária, Local, Modelo, Mês, Chassi, Data Cadastro, Dias, Montador, Aplicador
             csvData = '\uFEFF'; // BOM UTF-8
-            csvData += 'Data Finalização;Nº;Modelo;Chassi;Concessionária;Local;Data Cadastro;Dias Total;Montador;Aplicador\n';
+            csvData += 'Data Finalização;Número;Concessionária;Local;Modelo;Mês;Chassi;Data Cadastro;Dias Total;Montador;Aplicador\n';
             
             // Dados
             filtered.forEach((v, idx) => {
                 const dataFinal = Utils.formatDate(v.montagemData);
                 const numero = idx + 1;
-                const modelo = (v.modelo || '-').replace(/;/g, ',');
-                const chassi = (v.chassi || '-').replace(/;/g, ',');
                 const conc = (v.concessionaria || '-').replace(/;/g, ',');
                 const local = (v.local || '-').replace(/;/g, ',');
+                const modelo = (v.modelo || '-').replace(/;/g, ',');
+                const mes = v.montagemData ? Utils.getCurrentMonth() : '-'; // Mês da finalização
+                const chassi = (v.chassi || '-').replace(/;/g, ',');
                 const dataCad = v.cadastroData ? Utils.formatDate(v.cadastroData) : '-';
                 
                 // Calcular dias total
@@ -2767,7 +2797,7 @@ class ReportsManager {
                 const montador = v.montadoPor || v.montador || '-';
                 const aplicador = v.aplicadoPor || v.aplicador || '-';
                 
-                csvData += `${dataFinal};${numero};${modelo};${chassi};${conc};${local};${dataCad};${dias};${montador};${aplicador}\n`;
+                csvData += `${dataFinal};${numero};${conc};${local};${modelo};${mes};${chassi};${dataCad};${dias};${montador};${aplicador}\n`;
             });
             
         } else {
@@ -2781,19 +2811,19 @@ class ReportsManager {
             // Ordenar por data de cadastro (mais antigo primeiro)
             filtered.sort((a, b) => new Date(a.cadastroData) - new Date(b.cadastroData));
             
-            // CSV Header
+            // CSV Header - ORDEM: Data Cadastro, Número, Concessionária, Local, Modelo, Status, Chassi, Dias, Montador, Aplicador
             csvData = '\uFEFF';
-            csvData += 'Data Cadastro;Nº;Modelo;Chassi;Concessionária;Local;Status;Dias em Processo;Montador;Aplicador\n';
+            csvData += 'Data Cadastro;Número;Concessionária;Local;Modelo;Status;Chassi;Dias em Processo;Montador;Aplicador\n';
             
             // Dados
             filtered.forEach((v, idx) => {
                 const dataCad = Utils.formatDate(v.cadastroData);
                 const numero = idx + 1;
-                const modelo = (v.modelo || '-').replace(/;/g, ',');
-                const chassi = (v.chassi || '-').replace(/;/g, ',');
                 const conc = (v.concessionaria || '-').replace(/;/g, ',');
                 const local = (v.local || '-').replace(/;/g, ',');
+                const modelo = (v.modelo || '-').replace(/;/g, ',');
                 const status = v.status || '-';
+                const chassi = (v.chassi || '-').replace(/;/g, ',');
                 
                 // Calcular dias em processo
                 const dias = v.cadastroData ? 
@@ -2802,7 +2832,7 @@ class ReportsManager {
                 const montador = v.montador || '-';
                 const aplicador = v.aplicador || '-';
                 
-                csvData += `${dataCad};${numero};${modelo};${chassi};${conc};${local};${status};${dias};${montador};${aplicador}\n`;
+                csvData += `${dataCad};${numero};${conc};${local};${modelo};${status};${chassi};${dias};${montador};${aplicador}\n`;
             });
         }
         
