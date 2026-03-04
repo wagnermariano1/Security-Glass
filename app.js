@@ -2539,7 +2539,7 @@ class ReportsManager {
                     </div>
                 </div>
                 
-                <button onclick="ReportsManager.generateFilteredCSV()" style="width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <button id="btnGerarRelatorioFiltrado" style="width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span style="font-size: 1.3rem;">📥</span>
                     Gerar e Baixar CSV
                 </button>
@@ -2550,7 +2550,7 @@ class ReportsManager {
             <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                 <h3 style="margin: 0 0 12px 0; color: #64748b;">💾 Relatório Geral (Todos os Carros)</h3>
                 <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.95rem;">Baixe o CSV completo com todos os veículos cadastrados no sistema.</p>
-                <button onclick="ReportsManager.generateFullCSV()" style="padding: 12px 24px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                <button id="btnGerarRelatorioCompleto" style="padding: 12px 24px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
                     📥 Baixar CSV Completo
                 </button>
             </div>
@@ -2663,6 +2663,18 @@ class ReportsManager {
         if (periodSelect) {
             periodSelect.addEventListener('change', () => this.toggleCustomDates());
         }
+        
+        // Adicionar event listener para botão de gerar relatório filtrado
+        const btnGerar = document.getElementById('btnGerarRelatorioFiltrado');
+        if (btnGerar) {
+            btnGerar.addEventListener('click', () => this.generateFilteredCSV());
+        }
+        
+        // Adicionar event listener para botão de relatório completo
+        const btnCompleto = document.getElementById('btnGerarRelatorioCompleto');
+        if (btnCompleto) {
+            btnCompleto.addEventListener('click', () => this.generateFullCSV());
+        }
     }
 
     static exportReport() {
@@ -2757,7 +2769,21 @@ class ReportsManager {
     static generateFilteredCSV() {
         console.log('🔍 generateFilteredCSV chamada!');
         
-        const reportType = document.getElementById('reportType').value;
+        // Proteção contra múltiplos cliques
+        if (this._generating) {
+            console.log('⚠️ Já está gerando, aguarde...');
+            return;
+        }
+        this._generating = true;
+        
+        const reportTypeEl = document.getElementById('reportType');
+        if (!reportTypeEl) {
+            console.error('❌ Elemento reportType não encontrado!');
+            this._generating = false;
+            return;
+        }
+        
+        const reportType = reportTypeEl.value;
         console.log('📊 Tipo:', reportType);
         
         const dateRange = this.getDateRange();
@@ -2765,6 +2791,7 @@ class ReportsManager {
         
         if (!dateRange) {
             console.log('❌ dateRange é null, abortando');
+            this._generating = false;
             return;
         }
         
@@ -2848,6 +2875,7 @@ class ReportsManager {
         
         if (filtered.length === 0) {
             alert('Nenhum veículo encontrado no período selecionado!');
+            this._generating = false;
             return;
         }
         
@@ -2866,6 +2894,9 @@ class ReportsManager {
         setTimeout(() => URL.revokeObjectURL(url), 100);
         
         alert(`✅ Relatório gerado!\n\n${filtered.length} veículo(s) encontrado(s)\nArquivo: ${filename}`);
+        
+        // Liberar flag
+        this._generating = false;
     }
     
     static generateFullCSV() {
