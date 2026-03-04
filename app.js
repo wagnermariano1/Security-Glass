@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v19.6 - TROCAR SENHA DINÂMICA!
-// Auto-limpa cache + Firebase primeiro + Trocar senha para todos membros!
+// Security Glass App - Main JavaScript v19.7 - TROCAR SENHA PARA NOVOS MEMBROS!
+// Membros novos podem trocar senha padrão 11111111 para senha personalizada!
 
-console.log('🔥 Security Glass v19.6 - Trocar Senha Dinâmica!');
+console.log('🔥 Security Glass v19.7 - Trocar Senha Completa!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -791,15 +791,38 @@ class AuthSystem {
         
         const passwords = await DB.getPasswords();
         
-        if (passwords[user] !== currentPassword) {
+        // Verificar senha atual
+        let senhaAtualCorreta = false;
+        
+        if (passwords[user]) {
+            // Usuário já tem senha cadastrada
+            senhaAtualCorreta = (passwords[user] === currentPassword);
+        } else {
+            // Usuário novo da equipe - verificar se existe e aceitar senha padrão
+            const team = DB.getTeam();
+            const allMembers = [...team.montadores, ...team.aplicadores];
+            
+            const memberExists = allMembers.some(name => {
+                const memberUsername = name.toLowerCase().replace(/\s+/g, '');
+                return memberUsername === user;
+            });
+            
+            if (memberExists && currentPassword === '11111111') {
+                senhaAtualCorreta = true;
+                console.log(`✅ Primeiro troca de senha: ${user}`);
+            }
+        }
+        
+        if (!senhaAtualCorreta) {
             alert('Senha atual incorreta!');
             return;
         }
         
+        // Salvar nova senha
         passwords[user] = newPassword;
         await DB.savePasswords(passwords);
         
-        alert('Senha alterada com sucesso!');
+        alert(`✅ Senha alterada com sucesso!\n\nUsuário: ${user}\n\nFaça login novamente com a nova senha.`);
         document.getElementById('changePasswordModal').classList.remove('active');
         document.getElementById('changePasswordForm').reset();
     }
@@ -3791,7 +3814,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v19.6';
+    const VERSAO_ATUAL = 'v19.7';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
