@@ -2709,6 +2709,8 @@ class ReportsManager {
     
     static getDateRange() {
         const period = document.getElementById('reportPeriod').value;
+        console.log('📆 Período selecionado:', period);
+        
         const now = new Date();
         let startDate, endDate;
         
@@ -2742,15 +2744,23 @@ class ReportsManager {
             endDate = new Date(end + 'T23:59:59');
         }
         
+        console.log('✅ Datas calculadas:', startDate, 'até', endDate);
         return { startDate, endDate };
     }
     
     static generateFilteredCSV() {
+        console.log('🔍 generateFilteredCSV chamada!');
+        
         const reportType = document.getElementById('reportType').value;
+        console.log('📊 Tipo:', reportType);
         
         const dateRange = this.getDateRange();
+        console.log('📅 Range:', dateRange);
         
-        if (!dateRange) return;
+        if (!dateRange) {
+            console.log('❌ dateRange é null, abortando');
+            return;
+        }
         
         const { startDate, endDate } = dateRange;
         const vehicles = DB.getVehicles();
