@@ -2746,9 +2746,7 @@ class ReportsManager {
     }
     
     static generateFilteredCSV() {
-        // Pegar valores dos radio buttons
-        const reportTypeRadio = document.querySelector('input[name="reportType"]:checked');
-        const reportType = reportTypeRadio ? reportTypeRadio.value : 'finalizados';
+        const reportType = document.getElementById('reportType').value;
         
         const dateRange = this.getDateRange();
         
