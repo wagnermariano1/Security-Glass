@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.1 - ESPERA EM 3 ETAPAS!
-// Botão Espera em Aplicação e Montagem + Aba Espera com 3 seções!
+// Security Glass App - Main JavaScript v20.2 - ROTAS RESETAM DIARIAMENTE!
+// Sugestão busca apenas carros DE HOJE - amanhã volta pro 1!
 
-console.log('🔥 Security Glass v20.1 - Espera em 3 Etapas!');
+console.log('🔥 Security Glass v20.2 - Rotas por Dia!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3258,11 +3258,16 @@ class RotaDesmontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador em TODOS os carros
+        // Contar números de rota USADOS por esse montador HOJE
+        const hoje = new Date().toDateString();
         const numerosUsados = [];
         
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
+            
+            // FILTRO: Só carros cadastrados HOJE
+            const dataCadastro = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+            if (dataCadastro !== hoje) return; // Ignora carros de outros dias
             
             // Verificar se esse carro pertence ao montador
             if (v.montador === novoMontador && v.rotaDesmontagem) {
@@ -3271,7 +3276,11 @@ class RotaDesmontagemManager {
         });
         
         // TAMBÉM verificar carros na tela (não salvos ainda)
-        const cadastrados = vehicles.filter(v => v.status === 'cadastrado' || v.status === 'espera');
+        const cadastrados = vehicles.filter(v => {
+            const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+            return (v.status === 'cadastrado' || v.status === 'espera') && dataCad === hoje;
+        });
+        
         cadastrados.forEach(v => {
             if (v.id === vehicleId) return;
             
@@ -3294,7 +3303,7 @@ class RotaDesmontagemManager {
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
         
-        console.log(`🔢 ${novoMontador}: rotas usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
+        console.log(`🔢 ${novoMontador}: rotas HOJE ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -3495,11 +3504,16 @@ class RotaAplicacaoManager {
         // Desbloquear input
         inputSeq.removeAttribute('readonly');
         
-        // Contar números de sequência USADOS por esse aplicador em TODOS os carros
+        // Contar números de sequência USADOS por esse aplicador HOJE (desmontados hoje)
+        const hoje = new Date().toDateString();
         const numerosUsados = [];
         
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
+            
+            // FILTRO: Só carros desmontados HOJE
+            const dataDesmontagem = v.desmontagemData ? new Date(v.desmontagemData).toDateString() : null;
+            if (dataDesmontagem !== hoje) return; // Ignora carros desmontados em outros dias
             
             // Verificar se esse carro pertence ao aplicador
             if (v.aplicador === novoAplicador && v.sequenciaAplicacao) {
@@ -3508,7 +3522,11 @@ class RotaAplicacaoManager {
         });
         
         // TAMBÉM verificar carros na tela (não salvos ainda)
-        const desmontados = vehicles.filter(v => v.status === 'desmontado');
+        const desmontados = vehicles.filter(v => {
+            const dataDesm = v.desmontagemData ? new Date(v.desmontagemData).toDateString() : null;
+            return v.status === 'desmontado' && dataDesm === hoje;
+        });
+        
         desmontados.forEach(v => {
             if (v.id === vehicleId) return;
             
@@ -3710,11 +3728,16 @@ class RotaMontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador em TODOS os carros
+        // Contar números de rota USADOS por esse montador HOJE (aplicados hoje)
+        const hoje = new Date().toDateString();
         const numerosUsados = [];
         
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
+            
+            // FILTRO: Só carros aplicados HOJE
+            const dataAplicacao = v.aplicacaoData ? new Date(v.aplicacaoData).toDateString() : null;
+            if (dataAplicacao !== hoje) return; // Ignora carros aplicados em outros dias
             
             // Verificar se esse carro pertence ao montador E tem rota montagem
             if (v.montador === novoMontador && v.rotaMontagem) {
@@ -3723,7 +3746,11 @@ class RotaMontagemManager {
         });
         
         // TAMBÉM verificar carros na tela (não salvos ainda)
-        const aplicados = vehicles.filter(v => v.status === 'aplicado');
+        const aplicados = vehicles.filter(v => {
+            const dataAplic = v.aplicacaoData ? new Date(v.aplicacaoData).toDateString() : null;
+            return v.status === 'aplicado' && dataAplic === hoje;
+        });
+        
         aplicados.forEach(v => {
             if (v.id === vehicleId) return;
             
@@ -4362,7 +4389,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.1';
+    const VERSAO_ATUAL = 'v20.2';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
