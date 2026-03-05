@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.3 - VALIDAÇÃO NaN CORRIGIDA!
-// Ignora campos vazios na validação - não dá mais erro NaN!
+// Security Glass App - Main JavaScript v20.4 - ESPERA DESMONTAGEM LIMPA MONTADOR!
+// Ao voltar da espera desmontagem, limpa montador para Vinicius reatribuir!
 
-console.log('🔥 Security Glass v20.3 - Validação Corrigida!');
+console.log('🔥 Security Glass v20.4 - Espera Limpa!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -4023,7 +4023,9 @@ class EsperaManager {
         // Voltar para o status correto
         if (etapa === 'desmontagem') {
             vehicle.status = 'cadastrado';
-            // MANTÉM montador e rota (se tiver)
+            // LIMPAR montador e rota para Vinicius reatribuir
+            delete vehicle.montador;
+            delete vehicle.rotaDesmontagem;
         } else if (etapa === 'aplicacao') {
             vehicle.status = 'desmontado';
             // MANTÉM montador, aplicador e rotas
@@ -4399,7 +4401,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.3';
+    const VERSAO_ATUAL = 'v20.4';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
