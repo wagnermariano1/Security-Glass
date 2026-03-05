@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.5 - ESPERA LIMPA TODAS ATRIBUIÇÕES!
-// Voltar da espera SEMPRE limpa para Vinicius reatribuir!
+// Security Glass App - Main JavaScript v20.7 - VALIDAÇÃO POR DIA CORRIGIDA!
+// Validação de rotas TAMBÉM filtra por dia - zero conflito!
 
-console.log('🔥 Security Glass v20.5 - Espera Limpa Completa!');
+console.log('🔥 Security Glass v20.7 - PERFEITO!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2957,7 +2957,7 @@ class ReportsManager {
             
             // CSV Header - ORDEM: Data Finalização, Número, Concessionária, Local, Modelo, Mês, Chassi, Data Cadastro, Dias, Montador, Aplicador, OBS
             csvData = '\uFEFF'; // BOM UTF-8
-            csvData += 'Data Finalização;Número;Concessionária;Local;Modelo;Mês;Chassi;Data Cadastro;Dias Total;Montador;Aplicador;OBS\n';
+            csvData += 'Data Finalização;Número;Concessionária;Local;Modelo;Mês;Chassi;Data Cadastro;Dias Total;Desmontado por;Aplicado por;Montado por;OBS\n';
             
             // Dados
             filtered.forEach((v, idx) => {
@@ -2974,11 +2974,12 @@ class ReportsManager {
                 const dias = v.cadastroData && v.montagemData ? 
                     Math.ceil((new Date(v.montagemData) - new Date(v.cadastroData)) / (1000 * 60 * 60 * 24)) : '-';
                 
-                const montador = v.montadoPor || v.montador || '-';
-                const aplicador = v.aplicadoPor || v.aplicador || '-';
+                const desmontadoPor = v.desmontadoPor || '-';
+                const aplicadoPor = v.aplicadoPor || '-';
+                const montadoPor = v.montadoPor || '-';
                 const obs = (v.observacoes || '-').replace(/;/g, ',').replace(/\n/g, ' ');
                 
-                csvData += `${dataFinal};${numero};${conc};${local};${modelo};${mes};${chassi};${dataCad};${dias};${montador};${aplicador};${obs}\n`;
+                csvData += `${dataFinal};${numero};${conc};${local};${modelo};${mes};${chassi};${dataCad};${dias};${desmontadoPor};${aplicadoPor};${montadoPor};${obs}\n`;
             });
             
         } else {
@@ -3049,7 +3050,7 @@ class ReportsManager {
         
         // CSV completo de TODOS os carros
         let csvData = '\uFEFF';
-        csvData += 'ID;Data Cadastro;Modelo;Chassi;Concessionária;Local;Status;Montador;Aplicador;Data Finalização;OBS\n';
+        csvData += 'ID;Data Cadastro;Modelo;Chassi;Concessionária;Local;Status;Desmontado por;Aplicado por;Montado por;Data Finalização;OBS\n';
         
         vehicles.forEach((v, idx) => {
             const id = idx + 1;
@@ -3059,12 +3060,13 @@ class ReportsManager {
             const conc = (v.concessionaria || '-').replace(/;/g, ',');
             const local = (v.local || '-').replace(/;/g, ',');
             const status = v.status || '-';
-            const montador = v.montador || '-';
-            const aplicador = v.aplicador || '-';
+            const desmontadoPor = v.desmontadoPor || '-';
+            const aplicadoPor = v.aplicadoPor || '-';
+            const montadoPor = v.montadoPor || '-';
             const dataFinal = v.montagemData ? Utils.formatDate(v.montagemData) : '-';
             const obs = (v.observacoes || '-').replace(/;/g, ',').replace(/\n/g, ' ');
             
-            csvData += `${id};${dataCad};${modelo};${chassi};${conc};${local};${status};${montador};${aplicador};${dataFinal};${obs}\n`;
+            csvData += `${id};${dataCad};${modelo};${chassi};${conc};${local};${status};${desmontadoPor};${aplicadoPor};${montadoPor};${dataFinal};${obs}\n`;
         });
         
         const filename = `relatorio-completo-${Utils.formatDate(new Date())}.csv`;
@@ -3321,10 +3323,17 @@ class RotaDesmontagemManager {
         }).filter(Boolean))];
         
         // Validar CADA MONTADOR separadamente
+        const hoje = new Date().toDateString();
+        
         for (const montador of montadoresNaTela) {
-            // 1. Buscar rotas JÁ SALVAS desse montador específico
+            // 1. Buscar rotas JÁ SALVAS desse montador específico CADASTRADOS HOJE
             const rotasExistentes = vehicles
-                .filter(v => v.montador === montador && v.rotaDesmontagem)
+                .filter(v => {
+                    const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+                    return v.montador === montador && 
+                           v.rotaDesmontagem && 
+                           dataCad === hoje; // FILTRO: só hoje!
+                })
                 .map(v => v.rotaDesmontagem);
             
             // 2. Buscar rotas NOVAS na tela desse montador
@@ -4404,7 +4413,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.5';
+    const VERSAO_ATUAL = 'v20.7';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
