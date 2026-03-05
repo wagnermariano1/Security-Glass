@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v21.0 - SUGESTÃO IGNORA FINALIZADOS!
-// Agora só conta carros PENDENTES - finalizados não interferem! PERFEITO!
+// Security Glass App - Main JavaScript v21.1 - BUSCA DIRETO NO DOM!
+// Sugestão lê valores DIRETAMENTE da tela - 100% preciso!
 
-console.log('🔥 Security Glass v21.0 - Sistema Perfeito!');
+console.log('🔥 Security Glass v21.1 - Busca DOM Direto!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3260,43 +3260,23 @@ class RotaDesmontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador HOJE
-        const hoje = new Date().toDateString();
+        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
         const numerosUsados = [];
         
-        vehicles.forEach(v => {
-            if (v.id === vehicleId) return; // Pular o atual
+        // Pegar TODOS os selects e inputs de rota desmontagem na tela
+        document.querySelectorAll('[id^="montDesm_"]').forEach(select => {
+            // Pular o próprio carro atual
+            const carroId = select.id.replace('montDesm_', '');
+            if (carroId === vehicleId) return;
             
-            // FILTRO: Só carros CADASTRADOS (status) E cadastrados HOJE (data)
-            const dataCadastro = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
-            if (dataCadastro !== hoje) return; // Ignora carros de outros dias
-            if (v.status !== 'cadastrado') return; // Ignora finalizados/desmontados/etc
-            
-            // Verificar se esse carro pertence ao montador
-            if (v.montador === novoMontador && v.rotaDesmontagem) {
-                numerosUsados.push(v.rotaDesmontagem);
-            }
-        });
-        
-        // TAMBÉM verificar carros na tela (não salvos ainda)
-        const cadastrados = vehicles.filter(v => {
-            const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
-            return (v.status === 'cadastrado' || v.status === 'espera') && dataCad === hoje;
-        });
-        
-        cadastrados.forEach(v => {
-            if (v.id === vehicleId) return;
-            
-            const montSelect = document.getElementById(`montDesm_${v.id}`);
-            const montadorAtual = montSelect ? montSelect.value : v.montador;
-            
-            if (montadorAtual === novoMontador) {
-                const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
-                const numero = rotaInput && rotaInput.value ? parseInt(rotaInput.value) : v.rotaDesmontagem;
-                
-                // Só adiciona se for número válido
-                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
-                    numerosUsados.push(numero);
+            // Se o select tem o mesmo montador
+            if (select.value === novoMontador) {
+                const rotaInput = document.getElementById(`rotaDesm_${carroId}`);
+                if (rotaInput && rotaInput.value) {
+                    const numero = parseInt(rotaInput.value);
+                    if (!isNaN(numero) && !numerosUsados.includes(numero)) {
+                        numerosUsados.push(numero);
+                    }
                 }
             }
         });
@@ -3524,43 +3504,23 @@ class RotaAplicacaoManager {
         // Desbloquear input
         inputSeq.removeAttribute('readonly');
         
-        // Contar números de sequência USADOS por esse aplicador HOJE (desmontados hoje)
-        const hoje = new Date().toDateString();
+        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
         const numerosUsados = [];
         
-        vehicles.forEach(v => {
-            if (v.id === vehicleId) return; // Pular o atual
+        // Pegar TODOS os selects de aplicador na tela
+        document.querySelectorAll('[id^="app_"]').forEach(select => {
+            // Pular o próprio carro atual
+            const carroId = select.id.replace('app_', '');
+            if (carroId === vehicleId) return;
             
-            // FILTRO: Só carros DESMONTADOS (status) E desmontados HOJE (data)
-            const dataDesmontagem = v.desmontagemData ? new Date(v.desmontagemData).toDateString() : null;
-            if (dataDesmontagem !== hoje) return; // Ignora carros desmontados em outros dias
-            if (v.status !== 'desmontado') return; // Ignora finalizados/aplicados/etc
-            
-            // Verificar se esse carro pertence ao aplicador
-            if (v.aplicador === novoAplicador && v.sequenciaAplicacao) {
-                numerosUsados.push(v.sequenciaAplicacao);
-            }
-        });
-        
-        // TAMBÉM verificar carros na tela (não salvos ainda)
-        const desmontados = vehicles.filter(v => {
-            const dataDesm = v.desmontagemData ? new Date(v.desmontagemData).toDateString() : null;
-            return v.status === 'desmontado' && dataDesm === hoje;
-        });
-        
-        desmontados.forEach(v => {
-            if (v.id === vehicleId) return;
-            
-            const appSelect = document.getElementById(`app_${v.id}`);
-            const aplicadorAtual = appSelect ? appSelect.value : v.aplicador;
-            
-            if (aplicadorAtual === novoAplicador) {
-                const seqInput = document.getElementById(`seq_${v.id}`);
-                const numero = seqInput && seqInput.value ? parseInt(seqInput.value) : v.sequenciaAplicacao;
-                
-                // Só adiciona se for número válido
-                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
-                    numerosUsados.push(numero);
+            // Se o select tem o mesmo aplicador
+            if (select.value === novoAplicador) {
+                const seqInput = document.getElementById(`seq_${carroId}`);
+                if (seqInput && seqInput.value) {
+                    const numero = parseInt(seqInput.value);
+                    if (!isNaN(numero) && !numerosUsados.includes(numero)) {
+                        numerosUsados.push(numero);
+                    }
                 }
             }
         });
@@ -3755,43 +3715,23 @@ class RotaMontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Contar números de rota USADOS por esse montador HOJE (aplicados hoje)
-        const hoje = new Date().toDateString();
+        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
         const numerosUsados = [];
         
-        vehicles.forEach(v => {
-            if (v.id === vehicleId) return; // Pular o atual
+        // Pegar TODOS os selects de montador na tela
+        document.querySelectorAll('[id^="montMont_"]').forEach(select => {
+            // Pular o próprio carro atual
+            const carroId = select.id.replace('montMont_', '');
+            if (carroId === vehicleId) return;
             
-            // FILTRO: Só carros APLICADOS (status) E aplicados HOJE (data)
-            const dataAplicacao = v.aplicacaoData ? new Date(v.aplicacaoData).toDateString() : null;
-            if (dataAplicacao !== hoje) return; // Ignora carros aplicados em outros dias
-            if (v.status !== 'aplicado') return; // Ignora finalizados/montados/etc
-            
-            // Verificar se esse carro pertence ao montador E tem rota montagem
-            if (v.montador === novoMontador && v.rotaMontagem) {
-                numerosUsados.push(v.rotaMontagem);
-            }
-        });
-        
-        // TAMBÉM verificar carros na tela (não salvos ainda)
-        const aplicados = vehicles.filter(v => {
-            const dataAplic = v.aplicacaoData ? new Date(v.aplicacaoData).toDateString() : null;
-            return v.status === 'aplicado' && dataAplic === hoje;
-        });
-        
-        aplicados.forEach(v => {
-            if (v.id === vehicleId) return;
-            
-            const montSelect = document.getElementById(`montMont_${v.id}`);
-            const montadorAtual = montSelect ? montSelect.value : v.montador;
-            
-            if (montadorAtual === novoMontador) {
-                const rotaInput = document.getElementById(`rotaMont_${v.id}`);
-                const numero = rotaInput && rotaInput.value ? parseInt(rotaInput.value) : v.rotaMontagem;
-                
-                // Só adiciona se for número válido
-                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
-                    numerosUsados.push(numero);
+            // Se o select tem o mesmo montador
+            if (select.value === novoMontador) {
+                const rotaInput = document.getElementById(`rotaMont_${carroId}`);
+                if (rotaInput && rotaInput.value) {
+                    const numero = parseInt(rotaInput.value);
+                    if (!isNaN(numero) && !numerosUsados.includes(numero)) {
+                        numerosUsados.push(numero);
+                    }
                 }
             }
         });
@@ -4428,7 +4368,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v21.0';
+    const VERSAO_ATUAL = 'v21.1';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
