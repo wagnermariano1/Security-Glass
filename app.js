@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.4 - ESPERA DESMONTAGEM LIMPA MONTADOR!
-// Ao voltar da espera desmontagem, limpa montador para Vinicius reatribuir!
+// Security Glass App - Main JavaScript v20.5 - ESPERA LIMPA TODAS ATRIBUIÇÕES!
+// Voltar da espera SEMPRE limpa para Vinicius reatribuir!
 
-console.log('🔥 Security Glass v20.4 - Espera Limpa!');
+console.log('🔥 Security Glass v20.5 - Espera Limpa Completa!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -4028,10 +4028,13 @@ class EsperaManager {
             delete vehicle.rotaDesmontagem;
         } else if (etapa === 'aplicacao') {
             vehicle.status = 'desmontado';
-            // MANTÉM montador, aplicador e rotas
+            // LIMPAR aplicador e sequência para Vinicius reatribuir
+            delete vehicle.aplicador;
+            delete vehicle.sequenciaAplicacao;
         } else if (etapa === 'montagem') {
             vehicle.status = 'aplicado';
-            // MANTÉM tudo
+            // LIMPAR rota montagem para Vinicius reatribuir
+            delete vehicle.rotaMontagem;
         }
         
         // Limpar dados de espera
@@ -4401,7 +4404,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.4';
+    const VERSAO_ATUAL = 'v20.5';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
