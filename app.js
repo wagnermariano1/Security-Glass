@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.9 - SUGESTÃO AUTOMÁTICA CORRIGIDA!
-// Agora conta números NA TELA corretamente - sugere próximo número sempre!
+// Security Glass App - Main JavaScript v21.0 - SUGESTÃO IGNORA FINALIZADOS!
+// Agora só conta carros PENDENTES - finalizados não interferem! PERFEITO!
 
-console.log('🔥 Security Glass v20.9 - Sugestão Perfeita!');
+console.log('🔥 Security Glass v21.0 - Sistema Perfeito!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3267,9 +3267,10 @@ class RotaDesmontagemManager {
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // FILTRO: Só carros cadastrados HOJE
+            // FILTRO: Só carros CADASTRADOS (status) E cadastrados HOJE (data)
             const dataCadastro = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
             if (dataCadastro !== hoje) return; // Ignora carros de outros dias
+            if (v.status !== 'cadastrado') return; // Ignora finalizados/desmontados/etc
             
             // Verificar se esse carro pertence ao montador
             if (v.montador === novoMontador && v.rotaDesmontagem) {
@@ -3530,9 +3531,10 @@ class RotaAplicacaoManager {
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // FILTRO: Só carros desmontados HOJE
+            // FILTRO: Só carros DESMONTADOS (status) E desmontados HOJE (data)
             const dataDesmontagem = v.desmontagemData ? new Date(v.desmontagemData).toDateString() : null;
             if (dataDesmontagem !== hoje) return; // Ignora carros desmontados em outros dias
+            if (v.status !== 'desmontado') return; // Ignora finalizados/aplicados/etc
             
             // Verificar se esse carro pertence ao aplicador
             if (v.aplicador === novoAplicador && v.sequenciaAplicacao) {
@@ -3760,9 +3762,10 @@ class RotaMontagemManager {
         vehicles.forEach(v => {
             if (v.id === vehicleId) return; // Pular o atual
             
-            // FILTRO: Só carros aplicados HOJE
+            // FILTRO: Só carros APLICADOS (status) E aplicados HOJE (data)
             const dataAplicacao = v.aplicacaoData ? new Date(v.aplicacaoData).toDateString() : null;
             if (dataAplicacao !== hoje) return; // Ignora carros aplicados em outros dias
+            if (v.status !== 'aplicado') return; // Ignora finalizados/montados/etc
             
             // Verificar se esse carro pertence ao montador E tem rota montagem
             if (v.montador === novoMontador && v.rotaMontagem) {
@@ -4425,7 +4428,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.9';
+    const VERSAO_ATUAL = 'v21.0';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
