@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.7 - VALIDAÇÃO POR DIA CORRIGIDA!
-// Validação de rotas TAMBÉM filtra por dia - zero conflito!
+// Security Glass App - Main JavaScript v20.8 - BUG CRÍTICO CORRIGIDO!
+// rotasPorMontador undefined - CORRIGIDO! Rotas não somem mais!
 
-console.log('🔥 Security Glass v20.7 - PERFEITO!');
+console.log('🔥 Security Glass v20.8 - Bug Crítico Corrigido!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3374,13 +3374,22 @@ class RotaDesmontagemManager {
         
         // Se passou na validação, salvar
         let saved = 0;
+        const rotasPorMontador = {}; // Para contar carros por montador (notificações)
+        
         cadastrados.forEach(v => {
             const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             
-            if (rotaInput && montSelect) {
+            if (rotaInput && montSelect && montSelect.value) {
                 v.rotaDesmontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
+                
+                // Contar para notificação
+                if (!rotasPorMontador[v.montador]) {
+                    rotasPorMontador[v.montador] = [];
+                }
+                rotasPorMontador[v.montador].push(v);
+                
                 saved++;
             }
         });
@@ -4413,7 +4422,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.7';
+    const VERSAO_ATUAL = 'v20.8';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
