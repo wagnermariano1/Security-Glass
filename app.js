@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.8 - BUG CRÍTICO CORRIGIDO!
-// rotasPorMontador undefined - CORRIGIDO! Rotas não somem mais!
+// Security Glass App - Main JavaScript v20.9 - SUGESTÃO AUTOMÁTICA CORRIGIDA!
+// Agora conta números NA TELA corretamente - sugere próximo número sempre!
 
-console.log('🔥 Security Glass v20.8 - Bug Crítico Corrigido!');
+console.log('🔥 Security Glass v20.9 - Sugestão Perfeita!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3291,9 +3291,10 @@ class RotaDesmontagemManager {
             
             if (montadorAtual === novoMontador) {
                 const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
-                const numero = rotaInput ? parseInt(rotaInput.value) : v.rotaDesmontagem;
+                const numero = rotaInput && rotaInput.value ? parseInt(rotaInput.value) : v.rotaDesmontagem;
                 
-                if (numero && !numerosUsados.includes(numero)) {
+                // Só adiciona se for número válido
+                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -3553,9 +3554,10 @@ class RotaAplicacaoManager {
             
             if (aplicadorAtual === novoAplicador) {
                 const seqInput = document.getElementById(`seq_${v.id}`);
-                const numero = seqInput ? parseInt(seqInput.value) : v.sequenciaAplicacao;
+                const numero = seqInput && seqInput.value ? parseInt(seqInput.value) : v.sequenciaAplicacao;
                 
-                if (numero && !numerosUsados.includes(numero)) {
+                // Só adiciona se for número válido
+                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -3782,9 +3784,10 @@ class RotaMontagemManager {
             
             if (montadorAtual === novoMontador) {
                 const rotaInput = document.getElementById(`rotaMont_${v.id}`);
-                const numero = rotaInput ? parseInt(rotaInput.value) : v.rotaMontagem;
+                const numero = rotaInput && rotaInput.value ? parseInt(rotaInput.value) : v.rotaMontagem;
                 
-                if (numero && !numerosUsados.includes(numero)) {
+                // Só adiciona se for número válido
+                if (numero && !isNaN(numero) && !numerosUsados.includes(numero)) {
                     numerosUsados.push(numero);
                 }
             }
@@ -4422,7 +4425,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.8';
+    const VERSAO_ATUAL = 'v20.9';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
