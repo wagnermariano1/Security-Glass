@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.0 - RELATÓRIOS COM PERÍODOS!
-// Gran Finale! Relatórios filtrados por período + CSV ordenado por data!
+// Security Glass App - Main JavaScript v20.1 - ESPERA EM 3 ETAPAS!
+// Botão Espera em Aplicação e Montagem + Aba Espera com 3 seções!
 
-console.log('🔥 Security Glass v20.0 - Relatórios Completos!');
+console.log('🔥 Security Glass v20.1 - Espera em 3 Etapas!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1317,14 +1317,20 @@ class Dashboard {
             if (vehicle.status === 'cadastrado') {
                 return '<button class="btn btn-small btn-secondary" onclick="Dashboard.markAsDesmontado(\'' + vehicle.id + '\')">Desmontar</button>';
             } else if (vehicle.status === 'aplicado') {
-                return '<button class="btn btn-small btn-success" onclick="Dashboard.markAsMontado(\'' + vehicle.id + '\')">Montar</button>';
+                return `
+                    <button class="btn btn-small btn-success" onclick="Dashboard.markAsMontado('${vehicle.id}')">Montar</button>
+                    <button class="btn btn-small btn-warning" onclick="Dashboard.colocarEmEsperaMontagem('${vehicle.id}')">⏸️ Espera</button>
+                `;
             }
         }
         
         // Aplicador
         if (role === 'aplicador') {
             if (vehicle.status === 'desmontado') {
-                return '<button class="btn btn-small btn-secondary" onclick="Dashboard.markAsAplicado(\'' + vehicle.id + '\')">Aplicado</button>';
+                return `
+                    <button class="btn btn-small btn-secondary" onclick="Dashboard.markAsAplicado('${vehicle.id}')">Aplicado</button>
+                    <button class="btn btn-small btn-warning" onclick="Dashboard.colocarEmEsperaAplicacao('${vehicle.id}')">⏸️ Espera</button>
+                `;
             }
             // Se é cadastrado COM PRIORIDADE e é dele, mostra aviso
             if (vehicle.status === 'cadastrado' && vehicle.prioridade && vehicle.aplicador === currentUserName) {
@@ -1347,6 +1353,136 @@ class Dashboard {
     static markAsMontado(vehicleId) {
         console.log('markAsMontado chamado para veículo:', vehicleId);
         UpdateStatusModal.show(vehicleId, 'montado');
+    }
+    
+    static colocarEmEsperaAplicacao(vehicleId) {
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle) {
+            alert('Veículo não encontrado!');
+            return;
+        }
+        
+        // Modal com motivos específicos de aplicação
+        const motivos = [
+            'Película acabou',
+            'Aguardando arrumar arranhado',
+            'Não deu tempo no dia'
+        ];
+        
+        let html = `
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;">
+                <div style="background: white; padding: 24px; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h3 style="margin: 0 0 16px 0;">⏸️ Colocar em Espera - Aplicação</h3>
+                    <p style="margin-bottom: 16px;"><strong>${vehicle.modelo}</strong> - ${vehicle.chassi}</p>
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #dc2626;">Por que não aplicou?</label>
+                    <select id="motivoEsperaTemp" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">Selecione o motivo</option>
+                        ${motivos.map(m => `<option value="${m}">${m}</option>`).join('')}
+                    </select>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button id="btnCancelarEspera" style="padding: 10px 20px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                        <button id="btnConfirmarEspera" style="padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const modal = document.createElement('div');
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+        
+        document.getElementById('btnCancelarEspera').onclick = () => {
+            document.body.removeChild(modal);
+        };
+        
+        document.getElementById('btnConfirmarEspera').onclick = () => {
+            const motivo = document.getElementById('motivoEsperaTemp').value;
+            
+            if (!motivo) {
+                alert('Selecione o motivo!');
+                return;
+            }
+            
+            // Mover para espera
+            vehicle.status = 'espera';
+            vehicle.motivoEspera = motivo;
+            vehicle.dataEspera = new Date().toISOString();
+            vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
+            vehicle.etapaEspera = 'aplicacao'; // Identifica que veio da aplicação
+            
+            saveBoth.vehicles(vehicles);
+            Dashboard.renderDashboard();
+            
+            document.body.removeChild(modal);
+            alert(`✅ Veículo movido para ABA DE ESPERA.\nMotivo: ${motivo}`);
+        };
+    }
+    
+    static colocarEmEsperaMontagem(vehicleId) {
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle) {
+            alert('Veículo não encontrado!');
+            return;
+        }
+        
+        // Motivos iguais à desmontagem
+        const motivos = [
+            'Concessionária fechada',
+            'Carro em reparo',
+            'Passou da hora'
+        ];
+        
+        let html = `
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;">
+                <div style="background: white; padding: 24px; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h3 style="margin: 0 0 16px 0;">⏸️ Colocar em Espera - Montagem</h3>
+                    <p style="margin-bottom: 16px;"><strong>${vehicle.modelo}</strong> - ${vehicle.chassi}</p>
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #dc2626;">Por que não montou?</label>
+                    <select id="motivoEsperaTemp" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">Selecione o motivo</option>
+                        ${motivos.map(m => `<option value="${m}">${m}</option>`).join('')}
+                    </select>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button id="btnCancelarEspera" style="padding: 10px 20px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                        <button id="btnConfirmarEspera" style="padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const modal = document.createElement('div');
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+        
+        document.getElementById('btnCancelarEspera').onclick = () => {
+            document.body.removeChild(modal);
+        };
+        
+        document.getElementById('btnConfirmarEspera').onclick = () => {
+            const motivo = document.getElementById('motivoEsperaTemp').value;
+            
+            if (!motivo) {
+                alert('Selecione o motivo!');
+                return;
+            }
+            
+            // Mover para espera
+            vehicle.status = 'espera';
+            vehicle.motivoEspera = motivo;
+            vehicle.dataEspera = new Date().toISOString();
+            vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
+            vehicle.etapaEspera = 'montagem'; // Identifica que veio da montagem
+            
+            saveBoth.vehicles(vehicles);
+            Dashboard.renderDashboard();
+            
+            document.body.removeChild(modal);
+            alert(`✅ Veículo movido para ABA DE ESPERA.\nMotivo: ${motivo}`);
+        };
     }
 
     static startAutoRefresh() {
@@ -1412,6 +1548,7 @@ class Dashboard {
                     v.motivoEspera = 'Não desmontado até 18:40h';
                     v.dataEspera = new Date().toISOString();
                     v.tentouDesmontarPor = 'Automação (Não tentou)';
+                    v.etapaEspera = 'desmontagem'; // NOVO
                     
                     // Limpar montador e rota para reatribuir amanhã
                     delete v.montador;
@@ -2067,6 +2204,7 @@ class UpdateStatusModal {
             vehicle.motivoEspera = motivo;
             vehicle.dataEspera = new Date().toISOString();
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
+            vehicle.etapaEspera = 'desmontagem'; // NOVO: identifica de onde veio
             
             saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
@@ -3699,8 +3837,55 @@ class EsperaManager {
             return;
         }
         
-        list.innerHTML = emEspera.map(v => `
-            <div class="espera-card" style="background: white; padding: 20px; margin-bottom: 16px; border-radius: 8px; border-left: 4px solid #f97316;">
+        // Separar por etapa
+        const esperaDesmontagem = emEspera.filter(v => v.etapaEspera === 'desmontagem' || !v.etapaEspera);
+        const esperaAplicacao = emEspera.filter(v => v.etapaEspera === 'aplicacao');
+        const esperaMontagem = emEspera.filter(v => v.etapaEspera === 'montagem');
+        
+        let html = '';
+        
+        // SEÇÃO DESMONTAGEM
+        if (esperaDesmontagem.length > 0) {
+            html += `
+                <div style="background: #fff7ed; padding: 16px; border-radius: 8px; border-left: 4px solid #f97316; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; color: #ea580c;">🟠 Aguardando Desmontagem (${esperaDesmontagem.length})</h3>
+                    ${esperaDesmontagem.map(v => this.renderEsperaCard(v, 'desmontagem')).join('')}
+                </div>
+            `;
+        }
+        
+        // SEÇÃO APLICAÇÃO
+        if (esperaAplicacao.length > 0) {
+            html += `
+                <div style="background: #fef9c3; padding: 16px; border-radius: 8px; border-left: 4px solid #eab308; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; color: #ca8a04;">🟡 Aguardando Aplicação (${esperaAplicacao.length})</h3>
+                    ${esperaAplicacao.map(v => this.renderEsperaCard(v, 'aplicacao')).join('')}
+                </div>
+            `;
+        }
+        
+        // SEÇÃO MONTAGEM
+        if (esperaMontagem.length > 0) {
+            html += `
+                <div style="background: #fee2e2; padding: 16px; border-radius: 8px; border-left: 4px solid #dc2626; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; color: #b91c1c;">🔴 Aguardando Montagem (${esperaMontagem.length})</h3>
+                    ${esperaMontagem.map(v => this.renderEsperaCard(v, 'montagem')).join('')}
+                </div>
+            `;
+        }
+        
+        list.innerHTML = html;
+    }
+    
+    static renderEsperaCard(v, etapa) {
+        const etapaLabel = {
+            'desmontagem': 'Desmontagem',
+            'aplicacao': 'Aplicação',
+            'montagem': 'Montagem'
+        }[etapa];
+        
+        return `
+            <div class="espera-card" style="background: white; padding: 20px; margin-bottom: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                     <div>
                         <h3 style="margin: 0 0 8px 0;">${v.modelo}</h3>
@@ -3708,22 +3893,24 @@ class EsperaManager {
                         <p style="margin: 4px 0;"><strong>Concessionária:</strong> ${v.concessionaria}</p>
                         <p style="margin: 4px 0;"><strong>Local:</strong> ${v.local || '-'}</p>
                     </div>
-                    <span style="background: #f97316; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem;">EM ESPERA</span>
+                    <span style="background: #64748b; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem;">ESPERA ${etapaLabel.toUpperCase()}</span>
                 </div>
                 
                 <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
                     <p style="margin: 0; color: #92400e;"><strong>❌ Motivo:</strong> ${v.motivoEspera}</p>
-                    <p style="margin: 4px 0 0 0; color: #92400e; font-size: 0.9rem;"><strong>Tentou desmontar:</strong> ${v.tentouDesmontarPor} - ${Utils.formatDateTime(v.dataEspera)}</p>
+                    <p style="margin: 4px 0 0 0; color: #92400e; font-size: 0.9rem;"><strong>Por:</strong> ${v.tentouDesmontarPor} - ${Utils.formatDateTime(v.dataEspera)}</p>
                 </div>
                 
                 ${v.obsUrgencia ? `<p style="color: #dc2626; margin-bottom: 8px;"><strong>🚨 Urgência:</strong> ${v.obsUrgencia}</p>` : ''}
+                ${v.montador ? `<p style="margin: 4px 0;"><strong>Montador:</strong> ${v.montador}</p>` : ''}
+                ${v.aplicador ? `<p style="margin: 4px 0;"><strong>Aplicador:</strong> ${v.aplicador}</p>` : ''}
                 
                 <div style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="btn btn-primary" onclick="EsperaManager.reatribuir('${v.id}')">🔄 Reatribuir Montador</button>
-                    <button class="btn btn-secondary" onclick="EsperaManager.voltarFila('${v.id}')">↩️ Voltar pra Fila</button>
+                    <button class="btn btn-primary" onclick="EsperaManager.voltarParaEtapa('${v.id}', '${etapa}')">↩️ Voltar pra ${etapaLabel}</button>
+                    ${etapa === 'desmontagem' ? `<button class="btn btn-secondary" onclick="EsperaManager.reatribuir('${v.id}')">🔄 Reatribuir Montador</button>` : ''}
                 </div>
             </div>
-        `).join('');
+        `;
     }
     
     static reatribuir(vehicleId) {
@@ -3780,6 +3967,45 @@ class EsperaManager {
             document.body.removeChild(modal);
             alert(`✅ Veículo reatribuído para ${novoMontador}!`);
         };
+    }
+    
+    static voltarParaEtapa(vehicleId, etapa) {
+        const etapaLabel = {
+            'desmontagem': 'Desmontagem',
+            'aplicacao': 'Aplicação',
+            'montagem': 'Montagem'
+        }[etapa];
+        
+        if (!confirm(`Voltar este veículo para ${etapaLabel}?`)) return;
+        
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle) return;
+        
+        // Voltar para o status correto
+        if (etapa === 'desmontagem') {
+            vehicle.status = 'cadastrado';
+            // MANTÉM montador e rota (se tiver)
+        } else if (etapa === 'aplicacao') {
+            vehicle.status = 'desmontado';
+            // MANTÉM montador, aplicador e rotas
+        } else if (etapa === 'montagem') {
+            vehicle.status = 'aplicado';
+            // MANTÉM tudo
+        }
+        
+        // Limpar dados de espera
+        delete vehicle.motivoEspera;
+        delete vehicle.dataEspera;
+        delete vehicle.tentouDesmontarPor;
+        delete vehicle.etapaEspera;
+        
+        saveBoth.vehicles(vehicles);
+        this.loadEspera();
+        Dashboard.renderDashboard();
+        
+        alert(`✅ Veículo voltou para ${etapaLabel}!`);
     }
     
     static voltarFila(vehicleId) {
@@ -4136,7 +4362,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.0';
+    const VERSAO_ATUAL = 'v20.1';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
