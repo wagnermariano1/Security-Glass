@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v20.2 - ROTAS RESETAM DIARIAMENTE!
-// Sugestão busca apenas carros DE HOJE - amanhã volta pro 1!
+// Security Glass App - Main JavaScript v20.3 - VALIDAÇÃO NaN CORRIGIDA!
+// Ignora campos vazios na validação - não dá mais erro NaN!
 
-console.log('🔥 Security Glass v20.2 - Rotas por Dia!');
+console.log('🔥 Security Glass v20.3 - Validação Corrigida!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3569,6 +3569,11 @@ class RotaAplicacaoManager {
                 const rota = parseInt(seqInput.value);
                 const aplicador = appSelect.value;
                 
+                // IGNORAR se não tem aplicador OU número inválido
+                if (!aplicador || isNaN(rota) || !seqInput.value) {
+                    return; // Pula este carro
+                }
+                
                 if (!rotasPorAplicador[aplicador]) {
                     rotasPorAplicador[aplicador] = [];
                 }
@@ -3792,6 +3797,11 @@ class RotaMontagemManager {
             if (rotaInput && montSelect) {
                 const rota = parseInt(rotaInput.value);
                 const montador = montSelect.value;
+                
+                // IGNORAR se não tem montador OU número inválido
+                if (!montador || isNaN(rota) || !rotaInput.value) {
+                    return; // Pula este carro
+                }
                 
                 if (!rotasPorMontador[montador]) {
                     rotasPorMontador[montador] = [];
@@ -4389,7 +4399,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v20.2';
+    const VERSAO_ATUAL = 'v20.3';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
