@@ -63,20 +63,11 @@
                 <form id="loginForm">
                     <div class="form-group">
                         <label>Usuário</label>
-                        <select id="userSelect" required>
-                            <option value="">Selecione...</option>
-                            <option value="wagner">Wagner (Gestor)</option>
-                            <option value="vinicius">Vinicius (Gerente)</option>
-                            <option value="jonas">Jonas (Aplicador)</option>
-                            <option value="maycon">Maycon (Aplicador)</option>
-                            <option value="rafael">Rafael (Montador)</option>
-                            <option value="arthur">Arthur (Montador)</option>
-                            <option value="claiton">Claiton (Montador)</option>
-                        </select>
+                        <input type="text" id="userInput" required placeholder="Digite seu nome de usuário" autocomplete="username">
                     </div>
                     <div class="form-group">
                         <label>Senha</label>
-                        <input type="password" id="passwordInput" required placeholder="Digite sua senha">
+                        <input type="password" id="passwordInput" required placeholder="Digite sua senha" autocomplete="current-password">
                     </div>
                     <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;">
@@ -116,6 +107,11 @@
                     <button class="tab manager-only" data-tab="espera">⏸️ Espera</button>
                     <button class="tab manager-only" data-tab="reports">Relatórios</button>
                     <button class="tab manager-only" data-tab="team">Equipe</button>
+                    
+                    <!-- NOVO: Tabs Vendedora -->
+                    <button class="tab vendedora-only" data-tab="vendedoraDashboard" style="display: none;">📊 Meus Carros</button>
+                    <button class="tab vendedora-only" data-tab="vendedoraCadastro" style="display: none;">➕ Cadastrar</button>
+                    <button class="tab vendedora-only" data-tab="vendedoraRelatorio" style="display: none;">📈 Relatório</button>
                 </div>
             </header>
 
@@ -246,6 +242,13 @@
                         <button id="addMontadorBtn" class="btn btn-secondary">+ Adicionar Montador</button>
                     </div>
                     
+                    <!-- NOVO: Seção Vendedoras -->
+                    <div class="team-section">
+                        <h4>👩‍💼 Vendedoras</h4>
+                        <div id="vendedorasList" class="team-list"></div>
+                        <button id="addVendedoraBtn" class="btn btn-secondary">+ Adicionar Vendedora</button>
+                    </div>
+                    
                     <!-- Área de Configurações Avançadas (só Wagner) -->
                     <div id="wagnerOnlySettings" style="display: none; margin-top: 40px; padding-top: 30px; border-top: 2px solid #ef4444;">
                         <h3 style="color: #ef4444;">⚠️ Configurações Avançadas</h3>
@@ -256,6 +259,31 @@
                         <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 10px;">
                             ⚠️ Isso vai apagar TODOS os veículos cadastrados de forma permanente!
                         </p>
+                    </div>
+                </div>
+                
+                <!-- NOVO: Abas Vendedora -->
+                <div id="vendedoraDashboardTab" class="tab-content vendedora-only" style="display: none;">
+                    <div id="vendedoraDashboard"></div>
+                </div>
+                
+                <div id="vendedoraCadastroTab" class="tab-content vendedora-only" style="display: none;">
+                    <h3>➕ Cadastrar Veículo</h3>
+                    <div id="vendedoraCadastroForm" style="background: white; padding: 24px; border-radius: 8px;">
+                        <p style="color: #64748b; margin-bottom: 20px;">
+                            Preencha os dados do veículo. Você pode tirar foto da Ordem de Serviço para preencher automaticamente.
+                        </p>
+                        <button id="cadastroVendedoraBtn" class="btn btn-primary" style="width: 100%;">
+                            ➕ Cadastrar Novo Veículo
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="vendedoraRelatorioTab" class="tab-content vendedora-only" style="display: none;">
+                    <h3>📈 Meu Relatório</h3>
+                    <div style="background: white; padding: 24px; border-radius: 8px;">
+                        <p style="color: #64748b; margin-bottom: 20px;">Baixe o relatório com todos os seus veículos cadastrados.</p>
+                        <button id="gerarRelatorioVendedoraBtn" class="btn btn-primary">📥 Baixar Meu Relatório CSV</button>
                     </div>
                 </div>
             </main>

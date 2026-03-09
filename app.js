@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v21.1 - BUSCA DIRETO NO DOM!
-// Sugestão lê valores DIRETAMENTE da tela - 100% preciso!
+// Security Glass App - Main JavaScript v23.5-PROD - VERSÃO PRODUÇÃO FINAL!
+// Firebase ATIVADO + Caixa alta vendedora + Sistema 100% completo!
 
-console.log('🔥 Security Glass v21.1 - Busca DOM Direto!');
+console.log('🔥 Security Glass v23.5-PROD - PRODUÇÃO PRONTA!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -175,7 +175,8 @@ const DB = {
         // Padrão inicial SEM Vinicius montador (será adicionado manualmente)
         return {
             aplicadores: ['Jonas', 'Maycon'],
-            montadores: ['Rafael', 'Arthur', 'Claiton']
+            montadores: ['Rafael', 'Arthur', 'Claiton'],
+            vendedoras: [] // NOVO: lista de vendedoras
         };
     },
     
@@ -477,28 +478,6 @@ const Utils = {
 // Sistema de Autenticação com Senha
 class AuthSystem {
     static init() {
-        // Popular lista de usuários dinamicamente
-        const userSelect = document.getElementById('userSelect');
-        if (userSelect) {
-            const team = DB.getTeam();
-            const options = [];
-            
-            options.push('<option value="wagner">Wagner (Gestor)</option>');
-            options.push('<option value="vinicius">Vinicius (Gerente)</option>');
-            
-            team.montadores.forEach(name => {
-                const username = name.toLowerCase().replace(/\s+/g, '');
-                options.push(`<option value="${username}">${name} (Montador)</option>`);
-            });
-            
-            team.aplicadores.forEach(name => {
-                const username = name.toLowerCase().replace(/\s+/g, '');
-                options.push(`<option value="${username}">${name} (Aplicador)</option>`);
-            });
-            
-            userSelect.innerHTML = options.join('');
-        }
-        
         const loginForm = document.getElementById('loginForm');
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -516,61 +495,110 @@ class AuthSystem {
     }
 
     static async login() {
-        const userSelect = document.getElementById('userSelect');
+        const userInput = document.getElementById('userInput');
         const passwordInput = document.getElementById('passwordInput');
         const rememberMe = document.getElementById('rememberMe');
-        const username = userSelect.value;
+        const username = userInput.value.toLowerCase().replace(/\s+/g, '');
         const password = passwordInput.value;
         
         if (!username) {
-            alert('Selecione um usuário');
+            alert('Digite seu nome de usuário');
             return;
         }
         
         const passwords = await DB.getPasswords();
+        const team = DB.getTeam();
         
-        // Se usuário não está nas senhas cadastradas, verificar se é membro da equipe
-        if (!passwords[username]) {
-            const team = DB.getTeam();
-            const allMembers = [...team.montadores, ...team.aplicadores];
-            
-            // Verificar se username corresponde a algum membro
-            const memberExists = allMembers.some(name => {
-                const memberUsername = name.toLowerCase().replace(/\s+/g, '');
-                return memberUsername === username;
-            });
-            
-            if (memberExists) {
-                // Usuário novo da equipe - senha padrão
-                if (password === '11111111') {
-                    console.log(`✅ Login com senha padrão: ${username}`);
+        // Detectar tipo de usuário e nome completo
+        let fullName = '';
+        let role = '';
+        let isValid = false;
+        
+        // 1. Verificar se está em passwords (pode ser gestor, gerente, ou equipe)
+        if (passwords[username]) {
+            if (password === passwords[username]) {
+                isValid = true;
+                
+                // Detectar role baseado no usuário
+                if (username === 'wagner') {
+                    fullName = 'Wagner';
+                    role = 'gestor';
+                } else if (username === 'vinicius') {
+                    fullName = 'Vinicius';
+                    role = 'manager';
                 } else {
-                    alert('Senha incorreta! Para novos usuários, use: 11111111');
+                    // Buscar nos arrays do team
+                    const montador = team.montadores.find(n => 
+                        n.toLowerCase().replace(/\s+/g, '') === username
+                    );
+                    const aplicador = team.aplicadores.find(n => 
+                        n.toLowerCase().replace(/\s+/g, '') === username
+                    );
+                    
+                    if (montador) {
+                        role = 'montador';
+                        fullName = montador;
+                    } else if (aplicador) {
+                        role = 'aplicador';
+                        fullName = aplicador;
+                    }
+                }
+            } else {
+                alert('Senha incorreta!');
+                passwordInput.value = '';
+                return;
+            }
+        }
+        // 2. Verificar se é vendedora
+        if (!isValid && team.vendedoras) {
+            const vendedora = team.vendedoras.find(v => 
+                v.nome.toLowerCase().replace(/\s+/g, '') === username
+            );
+            if (vendedora) {
+                if (password === vendedora.senha) {
+                    isValid = true;
+                    fullName = vendedora.nome;
+                    role = 'vendedora';
+                } else {
+                    alert('Senha incorreta!');
                     passwordInput.value = '';
                     return;
                 }
-            } else {
-                alert('Usuário não encontrado!');
-                return;
             }
-        } else if (passwords[username] !== password) {
-            alert('Senha incorreta!');
-            passwordInput.value = '';
+        }
+        // 3. Verificar se é montador/aplicador
+        if (!isValid) {
+            const allMembers = [...team.montadores, ...team.aplicadores];
+            const member = allMembers.find(name => 
+                name.toLowerCase().replace(/\s+/g, '') === username
+            );
+            
+            if (member) {
+                // Senha padrão para equipe
+                if (password === '11111111') {
+                    isValid = true;
+                    fullName = member;
+                    // Detectar se é montador ou aplicador
+                    role = team.montadores.includes(member) ? 'montador' : 'aplicador';
+                } else {
+                    alert('Senha incorreta! Para membros da equipe, use: 11111111');
+                    passwordInput.value = '';
+                    return;
+                }
+            }
+        }
+        
+        if (!isValid) {
+            alert('Usuário não encontrado!');
             return;
         }
 
-        const userOption = userSelect.options[userSelect.selectedIndex];
-        const fullName = userOption.text.split(' (')[0];
-        const roleText = userOption.text.match(/\(([^)]+)\)/)[1];
-        
-        let role = 'montador';
-        if (roleText === 'Gestor') role = 'gestor';
-        else if (roleText === 'Gerente') role = 'manager';
-        else if (roleText === 'Aplicador') role = 'aplicador';
-
+        // Salvar estado
         APP_STATE.currentUser = username;
         APP_STATE.currentRole = role;
         APP_STATE.currentUserFullName = fullName;
+        
+        console.log('✅ Login:', {username, role, fullName});
 
         localStorage.setItem('currentUser', username);
         localStorage.setItem('currentRole', role);
@@ -656,7 +684,84 @@ class AuthSystem {
         
         document.getElementById('userNameDisplay').textContent = APP_STATE.currentUserFullName;
         
-        document.body.classList.add(APP_STATE.currentRole);
+        // Adicionar role ao body (proteção contra vazio)
+        if (APP_STATE.currentRole) {
+            document.body.classList.add(APP_STATE.currentRole);
+        }
+        
+        // NOVO: Controlar visibilidade por perfil
+        if (APP_STATE.currentRole === 'vendedora') {
+            // Desativar TODAS tabs normais
+            const dashTab = document.querySelector('[data-tab="dashboard"]');
+            const dashContent = document.getElementById('dashboardTab');
+            if (dashTab) {
+                dashTab.classList.remove('active');
+                dashTab.style.display = 'none';
+            }
+            if (dashContent) {
+                dashContent.classList.remove('active');
+                dashContent.style.display = 'none';
+            }
+            
+            const vehTab = document.querySelector('[data-tab="vehicles"]');
+            const vehContent = document.getElementById('vehiclesTab');
+            if (vehTab) {
+                vehTab.classList.remove('active');
+                vehTab.style.display = 'none';
+            }
+            if (vehContent) {
+                vehContent.classList.remove('active');
+                vehContent.style.display = 'none';
+            }
+            
+            // Esconder tabs de gestão
+            document.querySelectorAll('.manager-only').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('active');
+            });
+            
+            // Esconder conteúdos de gestão
+            document.querySelectorAll('.tab-content.manager-only').forEach(el => {
+                el.classList.remove('active');
+                el.style.display = 'none';
+            });
+            
+            // Mostrar APENAS tabs vendedora
+            document.querySelectorAll('.vendedora-only').forEach(el => {
+                el.style.display = 'block';
+            });
+            
+            // Ativar primeira tab vendedora
+            document.querySelector('[data-tab="vendedoraDashboard"]').classList.add('active');
+            document.getElementById('vendedoraDashboardTab').classList.add('active');
+            document.getElementById('vendedoraDashboardTab').style.display = 'block';
+            
+            // Carregar dashboard vendedora
+            VendedoraManager.loadDashboard();
+            
+            // IMPORTANTE: Configurar event listeners para vendedora
+            Dashboard.setupTabs();
+            this.setupVendedoraEventListeners();
+            
+            // NÃO chamar Dashboard.init() para vendedora
+            return;
+        } else {
+            // Perfis normais: esconder tabs vendedora E MOSTRAR tabs normais
+            document.querySelectorAll('.vendedora-only').forEach(el => el.style.display = 'none');
+            
+            // RESTAURAR tabs normais
+            const dashTab = document.querySelector('[data-tab="dashboard"]');
+            const vehTab = document.querySelector('[data-tab="vehicles"]');
+            if (dashTab) dashTab.style.display = '';
+            if (vehTab) vehTab.style.display = '';
+            
+            // RESTAURAR tabs manager (se for gestor/gerente)
+            if (APP_STATE.currentRole === 'gestor' || APP_STATE.currentRole === 'manager') {
+                document.querySelectorAll('.manager-only').forEach(el => {
+                    el.style.display = '';
+                });
+            }
+        }
         
         // Mostrar configurações avançadas só para Wagner
         if (APP_STATE.currentUser === 'wagner') {
@@ -666,6 +771,13 @@ class AuthSystem {
         }
         
         Dashboard.init();
+        
+        // Forçar refresh do dashboard após 100ms (garantir que carregou)
+        setTimeout(() => {
+            if (APP_STATE.currentRole !== 'vendedora') {
+                Dashboard.renderDashboard();
+            }
+        }, 100);
     }
 
     static checkAuth() {
@@ -710,8 +822,10 @@ class AuthSystem {
             APP_STATE.currentRole = role;
             APP_STATE.currentUserFullName = fullName;
             
-            const userSelect = document.getElementById('userSelect');
-            userSelect.value = user;
+            const userInput = document.getElementById('userInput');
+            if (userInput) {
+                userInput.value = user;
+            }
             
             this.showDashboard();
             
@@ -726,6 +840,67 @@ class AuthSystem {
         if (!sessionStorage.getItem('sessionId')) {
             sessionStorage.setItem('sessionId', Date.now().toString());
         }
+    }
+    
+    // NOVO: Configurar event listeners específicos para vendedora
+    static setupVendedoraEventListeners() {
+        // Botão cadastrar veículo
+        const cadastroBtn = document.getElementById('cadastroVendedoraBtn');
+        if (cadastroBtn) {
+            cadastroBtn.onclick = function() {
+                // Abrir modal
+                document.getElementById('newVehicleModal').classList.add('active');
+                
+                // Pré-preencher concessionária e local
+                const team = DB.getTeam();
+                const username = APP_STATE.currentUser;
+                const vendedora = team.vendedoras?.find(v => 
+                    v.nome.toLowerCase().replace(/\s+/g, '') === username
+                );
+                
+                if (vendedora) {
+                    const concInput = document.getElementById('concessionaria');
+                    const localInput = document.getElementById('local');
+                    const modeloInput = document.getElementById('modelo');
+                    const chassiInput = document.getElementById('chassi');
+                    
+                    if (concInput) {
+                        concInput.value = vendedora.concessionaria;
+                        concInput.setAttribute('readonly', 'true');
+                        concInput.style.background = '#f1f5f9';
+                    }
+                    
+                    if (localInput) {
+                        localInput.value = vendedora.local || '';
+                        localInput.setAttribute('readonly', 'true');
+                        localInput.style.background = '#f1f5f9';
+                    }
+                    
+                    // Forçar caixa alta em modelo e chassi
+                    if (modeloInput) {
+                        modeloInput.addEventListener('input', function() {
+                            this.value = this.value.toUpperCase();
+                        });
+                    }
+                    
+                    if (chassiInput) {
+                        chassiInput.addEventListener('input', function() {
+                            this.value = this.value.toUpperCase();
+                        });
+                    }
+                }
+            };
+        }
+        
+        // Botão gerar relatório
+        const relatorioBtn = document.getElementById('gerarRelatorioVendedoraBtn');
+        if (relatorioBtn) {
+            relatorioBtn.onclick = function() {
+                VendedoraManager.gerarRelatorio();
+            };
+        }
+        
+        console.log('✅ Event listeners vendedora configurados!');
     }
     
     static showChangePasswordModal() {
@@ -750,6 +925,14 @@ class AuthSystem {
                 const username = name.toLowerCase().replace(/\s+/g, '');
                 options.push(`<option value="${username}">${name} (Aplicador)</option>`);
             });
+            
+            // NOVO: Adicionar vendedoras
+            if (team.vendedoras && team.vendedoras.length > 0) {
+                team.vendedoras.forEach(v => {
+                    const username = v.nome.toLowerCase().replace(/\s+/g, '');
+                    options.push(`<option value="${username}">${v.nome} (Vendedora)</option>`);
+                });
+            }
             
             userSelect.innerHTML = options.join('');
         }
@@ -922,6 +1105,12 @@ class Dashboard {
                     RotaAplicacaoManager.loadRota();
                 } else if (targetTab === 'rotaMontagem') {
                     RotaMontagemManager.loadRota();
+                } else if (targetTab === 'vendedoraDashboard') {
+                    VendedoraManager.loadDashboard();
+                } else if (targetTab === 'vendedoraCadastro') {
+                    // Aba cadastro vendedora - nada a carregar
+                } else if (targetTab === 'vendedoraRelatorio') {
+                    // Aba relatório vendedora - nada a carregar
                 }
             });
         });
@@ -979,6 +1168,11 @@ class Dashboard {
 
         document.getElementById('addMontadorBtn')?.addEventListener('click', () => {
             TeamManager.addMember('montador');
+        });
+        
+        // NOVO: Botão adicionar vendedora
+        document.getElementById('addVendedoraBtn')?.addEventListener('click', () => {
+            TeamManager.addVendedora();
         });
         
         const saveRotaAplicacaoBtn = document.getElementById('saveRotaAplicacaoBtn');
@@ -1486,11 +1680,12 @@ class Dashboard {
     }
 
     static startAutoRefresh() {
+        // Atualizar dashboard a cada 10 segundos
         setInterval(() => {
             if (document.getElementById('dashboardTab').classList.contains('active')) {
                 this.renderDashboard();
             }
-        }, 30000);
+        }, 10000); // 10 segundos
         
         // Verificar automação 18h a cada 5 minutos
         this.checkEsperaAutomation();
@@ -1661,9 +1856,22 @@ class VehicleForm {
                 form.reset();
                 photoPreview.innerHTML = '';
                 extractBtn.style.display = 'none';
+                
                 // Limpar inputs de foto
                 photoInput.value = '';
                 photoInputCamera.value = '';
+                
+                // Limpar readonly (vendedora)
+                const concInput = document.getElementById('concessionaria');
+                const localInput = document.getElementById('local');
+                if (concInput) {
+                    concInput.removeAttribute('readonly');
+                    concInput.style.background = '';
+                }
+                if (localInput) {
+                    localInput.removeAttribute('readonly');
+                    localInput.style.background = '';
+                }
             });
         });
     }
@@ -1879,6 +2087,8 @@ class VehicleForm {
     }
 
     static submitForm() {
+        console.log('🔵 submitForm INICIADO!');
+        
         const concessionaria = document.getElementById('concessionaria').value.trim().toUpperCase();
         const local = document.getElementById('local').value.trim().toUpperCase();
         const chassi = document.getElementById('chassi').value.trim();
@@ -1888,6 +2098,8 @@ class VehicleForm {
         const obsUrgencia = document.getElementById('obsUrgencia').value.trim();
         const aplicador = document.getElementById('aplicador').value;
         const montador = document.getElementById('montador').value;
+        
+        console.log('📝 Dados:', {modelo, chassi, concessionaria});
         
         const vehicles = DB.getVehicles();
         const newVehicle = {
@@ -1903,11 +2115,16 @@ class VehicleForm {
             montador,
             status: 'cadastrado',
             cadastradoPor: APP_STATE.currentUserFullName,
+            cadastradoPorPerfil: APP_STATE.currentRole, // NOVO
             cadastroData: new Date().toISOString()
         };
         
+        console.log('🚗 Novo veículo:', newVehicle);
+        
         vehicles.unshift(newVehicle);
         saveBoth.vehicle(newVehicle);
+        
+        console.log('💾 Veículo salvo! Total:', vehicles.length);
         
         const concessionarias = DB.getConcessionarias();
         if (!concessionarias.includes(concessionaria) && concessionaria) {
@@ -1925,7 +2142,24 @@ class VehicleForm {
         document.getElementById('newVehicleForm').reset();
         document.getElementById('photoPreview').innerHTML = '';
         
-        Dashboard.renderDashboard();
+        // Limpar readonly (caso vendedora)
+        const concInput = document.getElementById('concessionaria');
+        const localInput = document.getElementById('local');
+        if (concInput) {
+            concInput.removeAttribute('readonly');
+            concInput.style.background = '';
+        }
+        if (localInput) {
+            localInput.removeAttribute('readonly');
+            localInput.style.background = '';
+        }
+        
+        // Recarregar dashboard apropriado
+        if (APP_STATE.currentRole === 'vendedora') {
+            VendedoraManager.loadDashboard();
+        } else {
+            Dashboard.renderDashboard();
+        }
         Dashboard.loadDataLists();
         
         alert('Veículo cadastrado com sucesso!');
@@ -2286,6 +2520,15 @@ class UpdateStatusModal {
             
             saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
+            
+            // NOVO: Notificar vendedora se foi ela quem cadastrou
+            if (vehicle.cadastradoPorPerfil === 'vendedora' && vehicle.cadastradoPor) {
+                PushNotifications.sendNotification(
+                    [vehicle.cadastradoPor.toLowerCase().replace(/\s+/g, '')],
+                    '✅ Veículo Finalizado',
+                    `${vehicle.modelo} está pronto para retirada!`
+                );
+            }
             
             // Notificação enviada pela Cloud Function automaticamente
             
@@ -3093,6 +3336,7 @@ class TeamManager {
         
         const aplicadoresList = document.getElementById('aplicadoresList');
         const montadoresList = document.getElementById('montadoresList');
+        const vendedorasList = document.getElementById('vendedorasList'); // NOVO
         
         aplicadoresList.innerHTML = team.aplicadores.map(name => `
             <div class="team-member">
@@ -3107,6 +3351,19 @@ class TeamManager {
                 <button class="btn-icon" onclick="TeamManager.removeMember('montador', '${name}')">🗑️</button>
             </div>
         `).join('');
+        
+        // NOVO: Renderizar vendedoras
+        if (vendedorasList && team.vendedoras) {
+            vendedorasList.innerHTML = team.vendedoras.map(v => `
+                <div class="team-member">
+                    <div>
+                        <strong>${v.nome}</strong>
+                        <small style="display: block; color: #64748b;">${v.concessionaria}</small>
+                    </div>
+                    <button class="btn-icon" onclick="TeamManager.removeVendedora('${v.nome}')">🗑️</button>
+                </div>
+            `).join('');
+        }
     }
 
     static async addMember(role) {
@@ -3147,12 +3404,66 @@ class TeamManager {
         this.loadTeam();
         Dashboard.loadTeamMembers();
     }
+    
+    // NOVO: Adicionar vendedora
+    static addVendedora() {
+        const nome = prompt('Nome da Vendedora:');
+        if (!nome) return;
+        
+        const concessionaria = prompt('Concessionária:');
+        if (!concessionaria) return;
+        
+        const local = prompt('Local (ex: RioRio C.I.O):');
+        if (!local) return;
+        
+        const senha = prompt('Senha inicial (vendedora poderá trocar):') || '12345678';
+        
+        const team = DB.getTeam();
+        if (!team.vendedoras) team.vendedoras = [];
+        
+        // Verificar se já existe
+        if (team.vendedoras.find(v => v.nome === nome)) {
+            alert('Vendedora já cadastrada!');
+            return;
+        }
+        
+        team.vendedoras.push({
+            nome: nome,
+            concessionaria: concessionaria,
+            local: local,
+            senha: senha
+        });
+        
+        DB.saveTeam(team);
+        this.loadTeam();
+        Dashboard.loadTeamMembers();
+        
+        alert(`✅ Vendedora ${nome} adicionada!\n\nLogin: ${nome.toLowerCase().replace(/\s+/g, '')}\nSenha: ${senha}\nConcessionária: ${concessionaria}\nLocal: ${local}`);
+    }
+    
+    // NOVO: Remover vendedora
+    static async removeVendedora(nome) {
+        if (!confirm(`Remover vendedora ${nome}?`)) return;
+        
+        const team = DB.getTeam();
+        if (!team.vendedoras) team.vendedoras = [];
+        
+        team.vendedoras = team.vendedoras.filter(v => v.nome !== nome);
+        
+        DB.saveTeam(team);
+        await FirebaseDB.saveTeam(team);
+        this.loadTeam();
+        Dashboard.loadTeamMembers();
+    }
 }
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     AuthSystem.init();
     AuthSystem.checkAuth();
+    
+    // Inicializar form de cadastro (para funcionar mesmo sem VehicleForm.show())
+    VehicleForm.setupForm();
 });
 
 // Gerenciador de Rota de Desmontagem
@@ -3260,8 +3571,20 @@ class RotaDesmontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
-        const numerosUsados = [];
+        // 1. Buscar números JÁ SALVOS no banco (hoje, cadastrados)
+        const hoje = new Date().toDateString();
+        const rotasSalvas = vehicles
+            .filter(v => {
+                const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+                return v.montador === novoMontador && 
+                       v.rotaDesmontagem && 
+                       dataCad === hoje &&
+                       v.status === 'cadastrado'; // Só cadastrados
+            })
+            .map(v => v.rotaDesmontagem);
+        
+        // 2. Buscar números NA TELA (ainda não salvos)
+        const numerosUsados = [...rotasSalvas]; // Começa com as salvas
         
         // Pegar TODOS os selects e inputs de rota desmontagem na tela
         document.querySelectorAll('[id^="montDesm_"]').forEach(select => {
@@ -3281,13 +3604,13 @@ class RotaDesmontagemManager {
             }
         });
         
-        // Achar maior número usado
+        // Achar maior número usado (banco + tela)
         const maiorNumero = numerosUsados.length > 0 ? Math.max(...numerosUsados) : 0;
         
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
         
-        console.log(`🔢 ${novoMontador}: rotas HOJE ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
+        console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -3314,7 +3637,8 @@ class RotaDesmontagemManager {
                     const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
                     return v.montador === montador && 
                            v.rotaDesmontagem && 
-                           dataCad === hoje; // FILTRO: só hoje!
+                           dataCad === hoje && // FILTRO: só hoje!
+                           v.status === 'cadastrado'; // FILTRO: só cadastrados (não finalizados)!
                 })
                 .map(v => v.rotaDesmontagem);
             
@@ -3504,8 +3828,20 @@ class RotaAplicacaoManager {
         // Desbloquear input
         inputSeq.removeAttribute('readonly');
         
-        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
-        const numerosUsados = [];
+        // 1. Buscar sequências JÁ SALVAS no banco (hoje, desmontados/aplicados)
+        const hoje = new Date().toDateString();
+        const sequenciasSalvas = vehicles
+            .filter(v => {
+                const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+                return v.aplicador === novoAplicador && 
+                       v.sequenciaAplicacao && 
+                       dataCad === hoje &&
+                       (v.status === 'desmontado' || v.status === 'aplicado'); // Desmontados ou aplicados
+            })
+            .map(v => v.sequenciaAplicacao);
+        
+        // 2. Buscar números NA TELA (ainda não salvos)
+        const numerosUsados = [...sequenciasSalvas]; // Começa com as salvas
         
         // Pegar TODOS os selects de aplicador na tela
         document.querySelectorAll('[id^="app_"]').forEach(select => {
@@ -3525,13 +3861,13 @@ class RotaAplicacaoManager {
             }
         });
         
-        // Achar maior número usado
+        // Achar maior número usado (banco + tela)
         const maiorNumero = numerosUsados.length > 0 ? Math.max(...numerosUsados) : 0;
         
         // Sugerir próximo número
         inputSeq.value = maiorNumero + 1;
         
-        console.log(`🔢 ${novoAplicador}: sequências usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
+        console.log(`🔢 ${novoAplicador}: seq salvas ${sequenciasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !sequenciasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -3715,8 +4051,20 @@ class RotaMontagemManager {
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
-        // Buscar números DIRETAMENTE nos inputs da tela (DOM)
-        const numerosUsados = [];
+        // 1. Buscar rotas JÁ SALVAS no banco (hoje, SÓ aplicados - não montados!)
+        const hoje = new Date().toDateString();
+        const rotasSalvas = vehicles
+            .filter(v => {
+                const dataCad = v.cadastroData ? new Date(v.cadastroData).toDateString() : null;
+                return v.montador === novoMontador && 
+                       v.rotaMontagem && 
+                       dataCad === hoje &&
+                       v.status === 'aplicado'; // SÓ aplicados (não montados/espera)
+            })
+            .map(v => v.rotaMontagem);
+        
+        // 2. Buscar números NA TELA (ainda não salvos)
+        const numerosUsados = [...rotasSalvas]; // Começa com as salvas
         
         // Pegar TODOS os selects de montador na tela
         document.querySelectorAll('[id^="montMont_"]').forEach(select => {
@@ -3736,13 +4084,13 @@ class RotaMontagemManager {
             }
         });
         
-        // Achar maior número usado
+        // Achar maior número usado (banco + tela)
         const maiorNumero = numerosUsados.length > 0 ? Math.max(...numerosUsados) : 0;
         
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
         
-        console.log(`🔢 ${novoMontador}: rotas montagem usadas ${numerosUsados.join(', ')} → sugerindo ${maiorNumero + 1}`);
+        console.log(`🔢 ${novoMontador}: rotas mont salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
     static saveRota() {
@@ -4368,7 +4716,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v21.1';
+    const VERSAO_ATUAL = 'v23.5-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
@@ -4393,8 +4741,149 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.log('📡 Dados serão carregados do Firebase...');
     }
     
-    await FirebaseDB.init();
+    await FirebaseDB.init(); // ✅ ATIVADO PARA PRODUÇÃO
     // NÃO inicializar notificações aqui - vai inicializar DEPOIS do login
-    PushNotifications.setupForegroundListener();
-    console.log('✅ App pronto com Firebase!');
+    PushNotifications.setupForegroundListener(); // ✅ ATIVADO PARA PRODUÇÃO
+    console.log('✅ App pronto COM Firebase (PRODUÇÃO)!');
 });
+
+// ========================================
+// GERENCIADOR VENDEDORA
+// ========================================
+class VendedoraManager {
+    
+    static loadDashboard() {
+        const vehicles = DB.getVehicles();
+        const currentUser = APP_STATE.currentUserFullName;
+        
+        console.log('🔍 Dashboard Vendedora - Usuário:', currentUser);
+        console.log('🔍 Total veículos:', vehicles.length);
+        
+        // Filtrar apenas carros cadastrados por esta vendedora (CASE-INSENSITIVE)
+        const meusCarros = vehicles.filter(v => {
+            const match = v.cadastradoPor && v.cadastradoPor.toLowerCase() === currentUser.toLowerCase();
+            if (match) console.log('✅ Match:', v.modelo);
+            return match;
+        });
+        
+        console.log('🔍 Meus carros:', meusCarros.length);
+        
+        const emProcesso = meusCarros.filter(v => v.status !== 'montado');
+        const finalizados = meusCarros.filter(v => v.status === 'montado');
+        
+        const dashboard = document.getElementById('vendedoraDashboard');
+        if (!dashboard) return;
+        
+        dashboard.innerHTML = `
+            <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 20px 0;">📊 Meus Carros</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border-left: 4px solid #22c55e;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #15803d;">${meusCarros.length}</div>
+                        <div style="color: #15803d; font-size: 0.9rem;">Total Cadastrados</div>
+                    </div>
+                    <div style="background: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #d97706;">${emProcesso.length}</div>
+                        <div style="color: #d97706; font-size: 0.9rem;">Em Processo</div>
+                    </div>
+                    <div style="background: #dbeafe; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #1d4ed8;">${finalizados.length}</div>
+                        <div style="color: #1d4ed8; font-size: 0.9rem;">Finalizados</div>
+                    </div>
+                </div>
+                
+                ${emProcesso.length > 0 ? `
+                    <h4 style="margin: 24px 0 12px 0;">🟡 Em Processo</h4>
+                    ${emProcesso.map(v => `
+                        <div style="background: #fef9c3; padding: 16px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #eab308;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <h4 style="margin: 0 0 8px 0;">${v.modelo}</h4>
+                                    <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Chassi:</strong> ${v.chassi}</p>
+                                    ${v.cadastroData ? `<p style="margin: 4px 0; font-size: 0.85rem; color: #64748b;">Cadastrado: ${Utils.formatDate(v.cadastroData)}</p>` : ''}
+                                </div>
+                                <span style="background: #eab308; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem; white-space: nowrap;">
+                                    Em Processo
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                ` : ''}
+                
+                ${finalizados.length > 0 ? `
+                    <h4 style="margin: 24px 0 12px 0;">✅ Finalizados</h4>
+                    ${finalizados.slice(0, 5).map(v => `
+                        <div style="background: #f0fdf4; padding: 16px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #22c55e;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <h4 style="margin: 0 0 8px 0;">${v.modelo}</h4>
+                                    <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Chassi:</strong> ${v.chassi}</p>
+                                    ${v.montagemData ? `<p style="margin: 4px 0; font-size: 0.85rem; color: #64748b;">Finalizado: ${Utils.formatDate(v.montagemData)}</p>` : ''}
+                                </div>
+                                <span style="background: #22c55e; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                    ✅ PRONTO
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${finalizados.length > 5 ? `<p style="text-align: center; color: #64748b; margin-top: 12px;">+ ${finalizados.length - 5} finalizados</p>` : ''}
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    static getStatusLabel(status) {
+        const labels = {
+            'cadastrado': '📋 Cadastrado',
+            'desmontado': '🔧 Desmontado',
+            'aplicado': '🛡️ Película Aplicada',
+            'montado': '✅ Finalizado',
+            'espera': '⏸️ Em Espera'
+        };
+        return labels[status] || status;
+    }
+    
+    static gerarRelatorio() {
+        const vehicles = DB.getVehicles();
+        const currentUser = APP_STATE.currentUserFullName;
+        
+        // Filtrar apenas carros desta vendedora
+        const meusCarros = vehicles.filter(v => v.cadastradoPor === currentUser);
+        
+        if (meusCarros.length === 0) {
+            alert('Você ainda não cadastrou nenhum veículo!');
+            return;
+        }
+        
+        // Gerar CSV
+        let csvData = '\uFEFF'; // BOM UTF-8
+        csvData += 'Data Cadastro;Modelo;Chassi;Status;Data Finalização;Dias Total\n';
+        
+        meusCarros.forEach(v => {
+            const dataCad = v.cadastroData ? Utils.formatDate(v.cadastroData) : '-';
+            const modelo = (v.modelo || '-').replace(/;/g, ',');
+            const chassi = (v.chassi || '-').replace(/;/g, ',');
+            const status = this.getStatusLabel(v.status);
+            const dataFinal = v.montagemData ? Utils.formatDate(v.montagemData) : '-';
+            
+            const dias = v.cadastroData && v.montagemData ? 
+                Math.ceil((new Date(v.montagemData) - new Date(v.cadastroData)) / (1000 * 60 * 60 * 24)) : '-';
+            
+            csvData += `${dataCad};${modelo};${chassi};${status};${dataFinal};${dias}\n`;
+        });
+        
+        // Download
+        const filename = `meus-carros-${Utils.formatDate(new Date())}.csv`;
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+        
+        alert(`✅ Relatório gerado!\n\n${meusCarros.length} veículo(s)\nArquivo: ${filename}`);
+    }
+}
+
