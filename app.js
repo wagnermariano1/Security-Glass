@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.5-PROD - VERSÃO PRODUÇÃO FINAL!
-// Firebase ATIVADO + Caixa alta vendedora + Sistema 100% completo!
+// Security Glass App - Main JavaScript v23.6-PROD - BUGS CRÍTICOS CORRIGIDOS!
+// Status não reverte mais + Vendedora troca senha + Automação busca Firebase antes de salvar!
 
-console.log('🔥 Security Glass v23.5-PROD - PRODUÇÃO PRONTA!');
+console.log('🔥 Security Glass v23.6-PROD - BUGS CRÍTICOS CORRIGIDOS!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -911,27 +911,41 @@ class AuthSystem {
         const userSelect = document.getElementById('changePasswordUser');
         if (userSelect) {
             const team = DB.getTeam();
-            const options = ['<option value="">Selecione...</option>'];
+            const currentRole = APP_STATE.currentRole;
+            const currentUser = APP_STATE.currentUser;
+            const options = [];
             
-            options.push('<option value="wagner">Wagner (Gestor)</option>');
-            options.push('<option value="vinicius">Vinicius (Gerente)</option>');
-            
-            team.montadores.forEach(name => {
-                const username = name.toLowerCase().replace(/\s+/g, '');
-                options.push(`<option value="${username}">${name} (Montador)</option>`);
-            });
-            
-            team.aplicadores.forEach(name => {
-                const username = name.toLowerCase().replace(/\s+/g, '');
-                options.push(`<option value="${username}">${name} (Aplicador)</option>`);
-            });
-            
-            // NOVO: Adicionar vendedoras
-            if (team.vendedoras && team.vendedoras.length > 0) {
-                team.vendedoras.forEach(v => {
-                    const username = v.nome.toLowerCase().replace(/\s+/g, '');
-                    options.push(`<option value="${username}">${v.nome} (Vendedora)</option>`);
+            // Se for vendedora, só mostra ela mesma!
+            if (currentRole === 'vendedora') {
+                const vendedora = team.vendedoras?.find(v => 
+                    v.nome.toLowerCase().replace(/\s+/g, '') === currentUser
+                );
+                if (vendedora) {
+                    options.push(`<option value="${currentUser}" selected>${vendedora.nome} (Vendedora)</option>`);
+                }
+            } else {
+                // Gestor/gerente vê todos
+                options.push('<option value="">Selecione...</option>');
+                options.push('<option value="wagner">Wagner (Gestor)</option>');
+                options.push('<option value="vinicius">Vinicius (Gerente)</option>');
+                
+                team.montadores.forEach(name => {
+                    const username = name.toLowerCase().replace(/\s+/g, '');
+                    options.push(`<option value="${username}">${name} (Montador)</option>`);
                 });
+                
+                team.aplicadores.forEach(name => {
+                    const username = name.toLowerCase().replace(/\s+/g, '');
+                    options.push(`<option value="${username}">${name} (Aplicador)</option>`);
+                });
+                
+                // Adicionar vendedoras
+                if (team.vendedoras && team.vendedoras.length > 0) {
+                    team.vendedoras.forEach(v => {
+                        const username = v.nome.toLowerCase().replace(/\s+/g, '');
+                        options.push(`<option value="${username}">${v.nome} (Vendedora)</option>`);
+                    });
+                }
             }
             
             userSelect.innerHTML = options.join('');
@@ -981,10 +995,11 @@ class AuthSystem {
             // Usuário já tem senha cadastrada
             senhaAtualCorreta = (passwords[user] === currentPassword);
         } else {
-            // Usuário novo da equipe - verificar se existe e aceitar senha padrão
+            // Verificar se é membro da equipe OU vendedora
             const team = DB.getTeam();
             const allMembers = [...team.montadores, ...team.aplicadores];
             
+            // Checar se é montador/aplicador
             const memberExists = allMembers.some(name => {
                 const memberUsername = name.toLowerCase().replace(/\s+/g, '');
                 return memberUsername === user;
@@ -994,6 +1009,18 @@ class AuthSystem {
                 senhaAtualCorreta = true;
                 console.log(`✅ Primeiro troca de senha: ${user}`);
             }
+            
+            // NOVO: Checar se é vendedora
+            if (!senhaAtualCorreta && team.vendedoras) {
+                const vendedora = team.vendedoras.find(v => 
+                    v.nome.toLowerCase().replace(/\s+/g, '') === user
+                );
+                
+                if (vendedora && currentPassword === vendedora.senha) {
+                    senhaAtualCorreta = true;
+                    console.log(`✅ Troca de senha vendedora: ${user}`);
+                }
+            }
         }
         
         if (!senhaAtualCorreta) {
@@ -1001,9 +1028,23 @@ class AuthSystem {
             return;
         }
         
-        // Salvar nova senha
-        passwords[user] = newPassword;
-        await DB.savePasswords(passwords);
+        // Salvar nova senha no local correto
+        const team = DB.getTeam();
+        const vendedora = team.vendedoras?.find(v => 
+            v.nome.toLowerCase().replace(/\s+/g, '') === user
+        );
+        
+        if (vendedora) {
+            // É vendedora → salvar em team.vendedoras
+            vendedora.senha = newPassword;
+            await DB.saveTeam(team);
+            console.log(`✅ Senha vendedora atualizada no team`);
+        } else {
+            // É gestor/gerente/equipe → salvar em passwords
+            passwords[user] = newPassword;
+            await DB.savePasswords(passwords);
+            console.log(`✅ Senha atualizada em passwords`);
+        }
         
         alert(`✅ Senha alterada com sucesso!\n\nUsuário: ${user}\n\nFaça login novamente com a nova senha.`);
         document.getElementById('changePasswordModal').classList.remove('active');
@@ -1694,7 +1735,7 @@ class Dashboard {
         }, 5 * 60 * 1000); // 5 minutos
     }
     
-    static checkEsperaAutomation() {
+    static async checkEsperaAutomation() {
         const now = new Date();
         const hour = now.getHours();
         const minutes = now.getMinutes();
@@ -1755,7 +1796,32 @@ class Dashboard {
         });
         
         if (movidosParaEspera > 0) {
-            saveBoth.vehicles(vehicles);
+            // CRITICAL: Buscar dados ATUALIZADOS do Firebase ANTES de salvar!
+            const vehiclesAtualizados = await FirebaseDB.getVehicles() || vehicles;
+            
+            // Aplicar mudanças nos dados ATUALIZADOS
+            vehiclesAtualizados.forEach(v => {
+                if (v.status === 'cadastrado' && v.cadastroData) {
+                    const cadastroDate = new Date(v.cadastroData);
+                    const cadastroDateStr = cadastroDate.toDateString();
+                    const cadastroHour = cadastroDate.getHours();
+                    const cadastroMinutes = cadastroDate.getMinutes();
+                    
+                    const cadastradoAntes = (cadastroHour < HORA_LIMITE) || (cadastroHour === HORA_LIMITE && cadastroMinutes < MINUTO_LIMITE);
+                    
+                    if (cadastroDateStr === today && cadastradoAntes) {
+                        v.status = 'espera';
+                        v.motivoEspera = 'Não desmontado até 18:40h';
+                        v.dataEspera = new Date().toISOString();
+                        v.tentouDesmontarPor = 'Automação (Não tentou)';
+                        v.etapaEspera = 'desmontagem';
+                        delete v.montador;
+                        delete v.rotaDesmontagem;
+                    }
+                }
+            });
+            
+            saveBoth.vehicles(vehiclesAtualizados);
             this.renderDashboard();
             
             // Marcar que já rodou hoje
@@ -4716,7 +4782,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.5-PROD';
+    const VERSAO_ATUAL = 'v23.6-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
