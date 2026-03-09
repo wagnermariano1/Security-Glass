@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.7-PROD - UX VENDEDORA PERFEITA!
-// Campo usuário oculto na troca de senha + Auto-selecionado!
+// Security Glass App - Main JavaScript v23.8-PROD - TROCA SENHA COMO LOGIN!
+// Input texto ao invés de select! UX consistente!
 
-console.log('🔥 Security Glass v23.7-PROD - UX PERFEITA!');
+console.log('🔥 Security Glass v23.8-PROD - UX CONSISTENTE!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -907,57 +907,8 @@ class AuthSystem {
         const modal = document.getElementById('changePasswordModal');
         modal.classList.add('active');
         
-        // Popular lista de usuários dinamicamente
-        const userSelect = document.getElementById('changePasswordUser');
-        if (userSelect) {
-            const team = DB.getTeam();
-            const currentRole = APP_STATE.currentRole;
-            const currentUser = APP_STATE.currentUser;
-            const options = [];
-            
-            // Se for vendedora, só mostra ela mesma!
-            if (currentRole === 'vendedora') {
-                const vendedora = team.vendedoras?.find(v => 
-                    v.nome.toLowerCase().replace(/\s+/g, '') === currentUser
-                );
-                if (vendedora) {
-                    options.push(`<option value="${currentUser}" selected>${vendedora.nome} (Vendedora)</option>`);
-                }
-            } else {
-                // Gestor/gerente vê todos
-                options.push('<option value="">Selecione...</option>');
-                options.push('<option value="wagner">Wagner (Gestor)</option>');
-                options.push('<option value="vinicius">Vinicius (Gerente)</option>');
-                
-                team.montadores.forEach(name => {
-                    const username = name.toLowerCase().replace(/\s+/g, '');
-                    options.push(`<option value="${username}">${name} (Montador)</option>`);
-                });
-                
-                team.aplicadores.forEach(name => {
-                    const username = name.toLowerCase().replace(/\s+/g, '');
-                    options.push(`<option value="${username}">${name} (Aplicador)</option>`);
-                });
-                
-                // Adicionar vendedoras
-                if (team.vendedoras && team.vendedoras.length > 0) {
-                    team.vendedoras.forEach(v => {
-                        const username = v.nome.toLowerCase().replace(/\s+/g, '');
-                        options.push(`<option value="${username}">${v.nome} (Vendedora)</option>`);
-                    });
-                }
-            }
-            
-            userSelect.innerHTML = options.join('');
-            
-            // Se for vendedora, ocultar campo (já selecionado)
-            const userFormGroup = userSelect.closest('.form-group');
-            if (currentRole === 'vendedora') {
-                if (userFormGroup) userFormGroup.style.display = 'none';
-            } else {
-                if (userFormGroup) userFormGroup.style.display = '';
-            }
-        }
+        // Input é texto agora, não precisa popular
+        // Usuário digita nome igual ao login
         
         const form = document.getElementById('changePasswordForm');
         form.onsubmit = (e) => {
@@ -974,13 +925,14 @@ class AuthSystem {
     }
     
     static async changePassword() {
-        const user = document.getElementById('changePasswordUser').value;
+        const userInput = document.getElementById('changePasswordUser').value;
+        const user = userInput.toLowerCase().replace(/\s+/g, ''); // Normalizar
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
         
         if (!user) {
-            alert('Selecione um usuário');
+            alert('Digite seu nome de usuário');
             return;
         }
         
@@ -4790,7 +4742,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.7-PROD';
+    const VERSAO_ATUAL = 'v23.8-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
