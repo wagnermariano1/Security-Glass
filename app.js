@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.6-PROD - BUGS CRÍTICOS CORRIGIDOS!
-// Status não reverte mais + Vendedora troca senha + Automação busca Firebase antes de salvar!
+// Security Glass App - Main JavaScript v23.7-PROD - UX VENDEDORA PERFEITA!
+// Campo usuário oculto na troca de senha + Auto-selecionado!
 
-console.log('🔥 Security Glass v23.6-PROD - BUGS CRÍTICOS CORRIGIDOS!');
+console.log('🔥 Security Glass v23.7-PROD - UX PERFEITA!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -949,6 +949,14 @@ class AuthSystem {
             }
             
             userSelect.innerHTML = options.join('');
+            
+            // Se for vendedora, ocultar campo (já selecionado)
+            const userFormGroup = userSelect.closest('.form-group');
+            if (currentRole === 'vendedora') {
+                if (userFormGroup) userFormGroup.style.display = 'none';
+            } else {
+                if (userFormGroup) userFormGroup.style.display = '';
+            }
         }
         
         const form = document.getElementById('changePasswordForm');
@@ -4782,7 +4790,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.6-PROD';
+    const VERSAO_ATUAL = 'v23.7-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
