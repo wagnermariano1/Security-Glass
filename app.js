@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.8-PROD - TROCA SENHA COMO LOGIN!
-// Input texto ao invés de select! UX consistente!
+// Security Glass App - Main JavaScript v23.9-PROD - BUG ROTA ESPERA CORRIGIDO!
+// Limpa rotas antigas ao reatribuir de espera! Sugestão sempre correta!
 
-console.log('🔥 Security Glass v23.8-PROD - UX CONSISTENTE!');
+console.log('🔥 Security Glass v23.9-PROD - ROTA ESPERA OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -4334,6 +4334,12 @@ class EsperaManager {
             delete vehicle.motivoEspera;
             delete vehicle.dataEspera;
             delete vehicle.tentouDesmontarPor;
+            delete vehicle.etapaEspera;
+            
+            // CRITICAL: Limpar TODAS as rotas antigas!
+            delete vehicle.rotaDesmontagem;
+            delete vehicle.rotaMontagem;
+            delete vehicle.sequenciaAplicacao;
             
             saveBoth.vehicles(vehicles);
             this.loadEspera();
@@ -4742,7 +4748,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.8-PROD';
+    const VERSAO_ATUAL = 'v23.9-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
