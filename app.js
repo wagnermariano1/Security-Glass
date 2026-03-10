@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.12-PROD - CONFIG VENDEDORES!
-// Termo neutro + lista renderiza mesmo vazia! Auto-refresh 30s mantido!
+// Security Glass App - Main JavaScript v23.13-PROD - CONFIG PERFEITO!
+// Input texto concessionária + Fechar/Cancelar funcionam! Auto-refresh 30s!
 
-console.log('🔥 Security Glass v23.12-PROD - Config OK!');
+console.log('🔥 Security Glass v23.13-PROD - Config Perfeito!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1259,6 +1259,13 @@ class Dashboard {
                 ConfigManager.saveVendedora();
             };
         }
+        
+        // Fechar modal editar vendedor
+        document.querySelectorAll('#editVendedoraModal .modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('editVendedoraModal').classList.remove('active');
+            });
+        });
         
         document.getElementById('addVendedoraConfigBtn')?.addEventListener('click', () => {
             TeamManager.addVendedora();
@@ -4836,7 +4843,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.12-PROD';
+    const VERSAO_ATUAL = 'v23.13-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
@@ -5052,15 +5059,9 @@ class ConfigManager {
         // Popular modal
         document.getElementById('editVendedoraIndex').value = index;
         document.getElementById('editVendedoraNome').value = vendedora.nome;
+        document.getElementById('editVendedoraConcessionaria').value = vendedora.concessionaria;
         document.getElementById('editVendedoraLocal').value = vendedora.local;
         document.getElementById('editVendedoraSenha').value = '';
-        
-        // Popular select de concessionárias
-        const concSelect = document.getElementById('editVendedoraConcessionaria');
-        const concessionarias = DB.getConcessionarias();
-        concSelect.innerHTML = concessionarias.map(c => 
-            `<option value="${c}" ${c === vendedora.concessionaria ? 'selected' : ''}>${c}</option>`
-        ).join('');
         
         // Abrir modal
         document.getElementById('editVendedoraModal').classList.add('active');
