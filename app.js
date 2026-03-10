@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.0-PROD - SOLUÇÃO DEFINITIVA STATUS!
-// saveBoth SEMPRE busca Firebase antes! NUNCA mais sobrescreve! MÚLTIPLAS ABAS OK!
+// Security Glass App - Main JavaScript v24.1-PROD - ASYNC CORRIGIDO!
+// Todas funções que usam await saveBoth agora são async! Login OK!
 
-console.log('🔥 Security Glass v24.0-PROD - SOLUÇÃO DEFINITIVA!');
+console.log('🔥 Security Glass v24.1-PROD - ASYNC OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2174,7 +2174,7 @@ class VehicleForm {
         }
     }
 
-    static submitForm() {
+    static async submitForm() {
         console.log('🔵 submitForm INICIADO!');
         
         const concessionaria = document.getElementById('concessionaria').value.trim().toUpperCase();
@@ -2733,7 +2733,7 @@ class VehicleDetailModal {
         });
     }
     
-    static deleteVehicle(vehicleId) {
+    static async deleteVehicle(vehicleId) {
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
@@ -3701,7 +3701,7 @@ class RotaDesmontagemManager {
         console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         
@@ -3958,7 +3958,7 @@ class RotaAplicacaoManager {
         console.log(`🔢 ${novoAplicador}: seq salvas ${sequenciasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !sequenciasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const desmontados = vehicles.filter(v => v.status === 'desmontado');
         
@@ -4181,7 +4181,7 @@ class RotaMontagemManager {
         console.log(`🔢 ${novoMontador}: rotas mont salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const aplicados = vehicles.filter(v => v.status === 'aplicado');
         
@@ -4412,7 +4412,7 @@ class EsperaManager {
         };
     }
     
-    static voltarParaEtapa(vehicleId, etapa) {
+    static async voltarParaEtapa(vehicleId, etapa) {
         const etapaLabel = {
             'desmontagem': 'Desmontagem',
             'aplicacao': 'Aplicação',
@@ -4456,7 +4456,7 @@ class EsperaManager {
         alert(`✅ Veículo voltou para ${etapaLabel}!`);
     }
     
-    static voltarFila(vehicleId) {
+    static async voltarFila(vehicleId) {
         if (!confirm('Voltar este veículo para a fila de CADASTRADOS?')) return;
         
         const vehicles = DB.getVehicles();
@@ -4810,7 +4810,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.0-PROD';
+    const VERSAO_ATUAL = 'v24.1-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
