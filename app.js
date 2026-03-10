@@ -2479,7 +2479,7 @@ class UpdateStatusModal {
         }
     }
 
-    static submit() {
+    static async submit() {
         const vehicleId = document.getElementById('updateVehicleId').value;
         const action = document.getElementById('updateAction').value;
         const newMontador = document.getElementById('changeMontadorSelect')?.value;
@@ -4810,7 +4810,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.1-PROD';
+    const VERSAO_ATUAL = 'v24.2-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
