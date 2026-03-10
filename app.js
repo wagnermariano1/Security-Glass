@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.11-PROD - CONFIG VENDEDORAS!
-// Gestor pode editar concessionária/local das vendedoras! Auto-refresh 30s!
+// Security Glass App - Main JavaScript v23.12-PROD - CONFIG VENDEDORES!
+// Termo neutro + lista renderiza mesmo vazia! Auto-refresh 30s mantido!
 
-console.log('🔥 Security Glass v23.11-PROD - Config Vendedoras!');
+console.log('🔥 Security Glass v23.12-PROD - Config OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3519,7 +3519,7 @@ class TeamManager {
         Dashboard.loadTeamMembers();
     }
     
-    // NOVO: Adicionar vendedora
+    // NOVO: Adicionar vendedor
     static addVendedora() {
         const nome = prompt('Nome da Vendedora:');
         if (!nome) return;
@@ -4836,7 +4836,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.11-PROD';
+    const VERSAO_ATUAL = 'v23.12-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
@@ -5010,15 +5010,20 @@ class VendedoraManager {
 // Gerenciador de Configurações (só Gestor)
 class ConfigManager {
     static loadConfig() {
-        this.renderVendedorasList();
+        this.renderVendedoresList();
     }
     
-    static renderVendedorasList() {
+    static renderVendedoresList() {
         const team = DB.getTeam();
         const container = document.getElementById('vendedorasConfigList');
         
+        if (!container) {
+            console.warn('Container vendedorasConfigList não encontrado');
+            return;
+        }
+        
         if (!team.vendedoras || team.vendedoras.length === 0) {
-            container.innerHTML = '<p style="color: #94a3b8;">Nenhuma vendedora cadastrada ainda.</p>';
+            container.innerHTML = '<p style="color: #94a3b8;">Nenhum vendedor(a) cadastrado ainda.</p>';
             return;
         }
         
@@ -5029,8 +5034,8 @@ class ConfigManager {
                     <span style="color: #64748b; font-size: 0.9rem;">${v.concessionaria} - ${v.local}</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary" onclick="ConfigManager.editVendedora(${index})">✏️ Editar</button>
-                    <button class="btn" style="background: #ef4444; color: white;" onclick="ConfigManager.deleteVendedora(${index})">🗑️ Excluir</button>
+                    <button class="btn btn-secondary" onclick="ConfigManager.editVendedor(${index})">✏️ Editar</button>
+                    <button class="btn" style="background: #ef4444; color: white;" onclick="ConfigManager.deleteVendedor(${index})">🗑️ Excluir</button>
                 </div>
             </div>
         `).join('');
@@ -5038,7 +5043,7 @@ class ConfigManager {
         container.innerHTML = html;
     }
     
-    static editVendedora(index) {
+    static editVendedor(index) {
         const team = DB.getTeam();
         const vendedora = team.vendedoras[index];
         
@@ -5095,18 +5100,18 @@ class ConfigManager {
         
         // Fechar modal e atualizar lista
         document.getElementById('editVendedoraModal').classList.remove('active');
-        this.renderVendedorasList();
+        this.renderVendedoresList();
         
-        alert('✅ Vendedora atualizada com sucesso!');
+        alert('✅ Vendedor(a) atualizado(a) com sucesso!');
     }
     
-    static async deleteVendedora(index) {
+    static async deleteVendedor(index) {
         const team = DB.getTeam();
-        const vendedora = team.vendedoras[index];
+        const vendedor = team.vendedoras[index];
         
-        if (!vendedora) return;
+        if (!vendedor) return;
         
-        if (!confirm(`❌ Excluir vendedora ${vendedora.nome}?\n\nIsso não apagará os veículos já cadastrados por ela.`)) {
+        if (!confirm(`❌ Excluir ${vendedor.nome}?\n\nIsso não apagará os veículos já cadastrados.`)) {
             return;
         }
         
@@ -5119,8 +5124,8 @@ class ConfigManager {
             await FirebaseDB.saveTeam(team);
         }
         
-        this.renderVendedorasList();
-        alert('✅ Vendedora excluída!');
+        this.renderVendedoresList();
+        alert('✅ Vendedor(a) excluído(a)!');
     }
 }
 
