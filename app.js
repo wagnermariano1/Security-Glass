@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.9-PROD - BUG ROTA ESPERA CORRIGIDO!
-// Limpa rotas antigas ao reatribuir de espera! Sugestão sempre correta!
+// Security Glass App - Main JavaScript v23.10-PROD - AUTO-REFRESH 30s!
+// Reduz chance de sobrescrever dados! De 10s → 30s como v21.1 que funcionava!
 
-console.log('🔥 Security Glass v23.9-PROD - ROTA ESPERA OK!');
+console.log('🔥 Security Glass v23.10-PROD - 30s Refresh!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -271,27 +271,89 @@ const DB = {
 
 // Helper para salvar em localStorage E Firebase
 const saveBoth = {
-    vehicles: (vehicles) => {
-        DB.saveVehicles(vehicles);
+    vehicles: async (vehiclesLocal) => {
+        // CRITICAL: SEMPRE buscar dados ATUAIS do Firebase ANTES de salvar!
+        let vehiclesFinal = vehiclesLocal;
+        
         if (window.firebase && FirebaseDB.initialized) {
-            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    // Merge: atualizar veículos do Firebase com mudanças locais
+                    vehiclesFinal = vehiclesFirebase.map(vFB => {
+                        // Procurar se tem versão local deste veículo
+                        const vLocal = vehiclesLocal.find(vL => vL.id === vFB.id);
+                        // Se tem local, usar local (mais recente), senão Firebase
+                        return vLocal || vFB;
+                    });
+                    
+                    // Adicionar veículos que só existem no local (novos)
+                    vehiclesLocal.forEach(vLocal => {
+                        if (!vehiclesFinal.find(v => v.id === vLocal.id)) {
+                            vehiclesFinal.push(vLocal);
+                        }
+                    });
+                    
+                    console.log('✅ Merge Firebase ← Local concluído');
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase, usando dados locais:', error);
+            }
+        }
+        
+        // Salvar localmente
+        DB.saveVehicles(vehiclesFinal);
+        
+        // Salvar no Firebase
+        if (window.firebase && FirebaseDB.initialized) {
+            vehiclesFinal.forEach(v => FirebaseDB.saveVehicle(v));
         }
     },
-    vehicle: (vehicle) => {
-        const vehicles = DB.getVehicles();
+    vehicle: async (vehicle) => {
+        // Buscar lista ATUAL do Firebase
+        let vehicles = DB.getVehicles();
+        
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    vehicles = vehiclesFirebase;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase:', error);
+            }
+        }
+        
         const index = vehicles.findIndex(v => v.id === vehicle.id);
         if (index >= 0) {
             vehicles[index] = vehicle;
         } else {
             vehicles.unshift(vehicle);
         }
+        
         DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
             FirebaseDB.saveVehicle(vehicle);
         }
     },
-    deleteVehicle: (vehicleId) => {
-        const vehicles = DB.getVehicles().filter(v => v.id !== vehicleId);
+    deleteVehicle: async (vehicleId) => {
+        // Buscar lista ATUAL do Firebase
+        let vehicles = DB.getVehicles();
+        
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    vehicles = vehiclesFirebase;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase:', error);
+            }
+        }
+        
+        vehicles = vehicles.filter(v => v.id !== vehicleId);
+        
         DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
             FirebaseDB.deleteVehicle(vehicleId);
@@ -911,7 +973,7 @@ class AuthSystem {
         // Usuário digita nome igual ao login
         
         const form = document.getElementById('changePasswordForm');
-        form.onsubmit = (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             this.changePassword();
         };
@@ -1588,11 +1650,11 @@ class Dashboard {
         modal.innerHTML = html;
         document.body.appendChild(modal);
         
-        document.getElementById('btnCancelarEspera').onclick = () => {
+        document.getElementById('btnCancelarEspera').onclick = async () => {
             document.body.removeChild(modal);
         };
         
-        document.getElementById('btnConfirmarEspera').onclick = () => {
+        document.getElementById('btnConfirmarEspera').onclick = async () => {
             const motivo = document.getElementById('motivoEsperaTemp').value;
             
             if (!motivo) {
@@ -1607,7 +1669,7 @@ class Dashboard {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'aplicacao'; // Identifica que veio da aplicação
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             document.body.removeChild(modal);
@@ -1653,11 +1715,11 @@ class Dashboard {
         modal.innerHTML = html;
         document.body.appendChild(modal);
         
-        document.getElementById('btnCancelarEspera').onclick = () => {
+        document.getElementById('btnCancelarEspera').onclick = async () => {
             document.body.removeChild(modal);
         };
         
-        document.getElementById('btnConfirmarEspera').onclick = () => {
+        document.getElementById('btnConfirmarEspera').onclick = async () => {
             const motivo = document.getElementById('motivoEsperaTemp').value;
             
             if (!motivo) {
@@ -1672,7 +1734,7 @@ class Dashboard {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'montagem'; // Identifica que veio da montagem
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             document.body.removeChild(modal);
@@ -1681,12 +1743,12 @@ class Dashboard {
     }
 
     static startAutoRefresh() {
-        // Atualizar dashboard a cada 10 segundos
+        // Atualizar dashboard a cada 30 segundos
         setInterval(() => {
             if (document.getElementById('dashboardTab').classList.contains('active')) {
                 this.renderDashboard();
             }
-        }, 10000); // 10 segundos
+        }, 30000); // 30 segundos (reduz chance de sobrescrever dados)
         
         // Verificar automação 18h a cada 5 minutos
         this.checkEsperaAutomation();
@@ -1781,7 +1843,7 @@ class Dashboard {
                 }
             });
             
-            saveBoth.vehicles(vehiclesAtualizados);
+            await saveBoth.vehicles(vehiclesAtualizados);
             this.renderDashboard();
             
             // Marcar que já rodou hoje
@@ -1870,7 +1932,7 @@ class VehicleForm {
             this.checkDuplicateChassi();
         });
 
-        form.onsubmit = (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             this.submitForm();
         };
@@ -2112,7 +2174,7 @@ class VehicleForm {
         }
     }
 
-    static submitForm() {
+    static async submitForm() {
         console.log('🔵 submitForm INICIADO!');
         
         const concessionaria = document.getElementById('concessionaria').value.trim().toUpperCase();
@@ -2148,7 +2210,7 @@ class VehicleForm {
         console.log('🚗 Novo veículo:', newVehicle);
         
         vehicles.unshift(newVehicle);
-        saveBoth.vehicle(newVehicle);
+        await saveBoth.vehicle(newVehicle);
         
         console.log('💾 Veículo salvo! Total:', vehicles.length);
         
@@ -2245,7 +2307,7 @@ class UpdateStatusModal {
             document.getElementById('motivoNaoDesmontar').value = '';
             
             // Listeners dos botões SIM/NÃO
-            document.getElementById('btnDesmontouSim').onclick = () => {
+            document.getElementById('btnDesmontouSim').onclick = async () => {
                 desmontarChoiceSection.style.display = 'none';
                 obsDesmontarSection.style.display = 'block';
                 motivoNaoDesmontarSection.style.display = 'none';
@@ -2255,7 +2317,7 @@ class UpdateStatusModal {
                 document.getElementById('motivoNaoDesmontar').removeAttribute('required');
             };
             
-            document.getElementById('btnDesmontouNao').onclick = () => {
+            document.getElementById('btnDesmontouNao').onclick = async () => {
                 desmontarChoiceSection.style.display = 'none';
                 obsDesmontarSection.style.display = 'none';
                 motivoNaoDesmontarSection.style.display = 'block';
@@ -2313,7 +2375,7 @@ class UpdateStatusModal {
         modal.classList.add('active');
         console.log('Modal deveria estar visível agora');
         
-        form.onsubmit = (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             this.submit();
         };
@@ -2417,7 +2479,7 @@ class UpdateStatusModal {
         }
     }
 
-    static submit() {
+    static async submit() {
         const vehicleId = document.getElementById('updateVehicleId').value;
         const action = document.getElementById('updateAction').value;
         const newMontador = document.getElementById('changeMontadorSelect')?.value;
@@ -2440,7 +2502,7 @@ class UpdateStatusModal {
                 vehicle.obsDesmontar = obsDesmontar;
             }
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2466,7 +2528,7 @@ class UpdateStatusModal {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'desmontagem'; // NOVO: identifica de onde veio
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2488,7 +2550,7 @@ class UpdateStatusModal {
                 vehicle.obsAplicador = obsAplicador;
             }
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2511,7 +2573,7 @@ class UpdateStatusModal {
                 vehicle.montador = newMontador;
                 vehicle.status = 'aplicado'; // Volta pra fila
                 
-                saveBoth.vehicles(vehicles);
+                await saveBoth.vehicles(vehicles);
                 Dashboard.renderDashboard();
                 
                 document.getElementById('updateStatusModal').classList.remove('active');
@@ -2544,7 +2606,7 @@ class UpdateStatusModal {
             
             console.log(`Salvando ${vehicle.montagemFotos.length} fotos`); // Debug
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             // NOVO: Notificar vendedora se foi ela quem cadastrou
@@ -2671,7 +2733,7 @@ class VehicleDetailModal {
         });
     }
     
-    static deleteVehicle(vehicleId) {
+    static async deleteVehicle(vehicleId) {
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
@@ -2684,7 +2746,7 @@ class VehicleDetailModal {
         
         if (confirm(confirmMsg)) {
             // Remover veículo
-            saveBoth.deleteVehicle(vehicleId);
+            await saveBoth.deleteVehicle(vehicleId);
             
             // Fechar modal e atualizar
             document.getElementById('vehicleDetailModal').classList.remove('active');
@@ -2756,7 +2818,7 @@ class VehicleEditModal {
         modal.classList.add('active');
         
         // Listener do form
-        form.onsubmit = (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             this.saveEdit();
         };
@@ -2788,7 +2850,7 @@ class VehicleEditModal {
             modelos.map(m => `<option value="${m}">`).join('');
     }
     
-    static saveEdit() {
+    static async saveEdit() {
         const vehicles = DB.getVehicles();
         const vehicleId = document.getElementById('editVehicleId').value;
         const vehicle = vehicles.find(v => v.id === vehicleId);
@@ -2813,7 +2875,7 @@ class VehicleEditModal {
         vehicle.montador = document.getElementById('editMontador').value;
         
         // Salvar
-        saveBoth.vehicle(vehicle);
+        await saveBoth.vehicle(vehicle);
         
         // Fechar modal e atualizar
         document.getElementById('vehicleEditModal').classList.remove('active');
@@ -3639,7 +3701,7 @@ class RotaDesmontagemManager {
         console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         
@@ -3726,7 +3788,7 @@ class RotaDesmontagemManager {
             }
         });
         
-        saveBoth.vehicles(vehicles);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Enviar notificações para montadores
@@ -3896,7 +3958,7 @@ class RotaAplicacaoManager {
         console.log(`🔢 ${novoAplicador}: seq salvas ${sequenciasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !sequenciasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const desmontados = vehicles.filter(v => v.status === 'desmontado');
         
@@ -3950,7 +4012,7 @@ class RotaAplicacaoManager {
             }
         });
         
-        saveBoth.vehicles(vehicles);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar aplicadores
@@ -4119,7 +4181,7 @@ class RotaMontagemManager {
         console.log(`🔢 ${novoMontador}: rotas mont salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
-    static saveRota() {
+    static async saveRota() {
         const vehicles = DB.getVehicles();
         const aplicados = vehicles.filter(v => v.status === 'aplicado');
         
@@ -4173,7 +4235,7 @@ class RotaMontagemManager {
             }
         });
         
-        saveBoth.vehicles(vehicles);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar montadores
@@ -4322,11 +4384,11 @@ class EsperaManager {
         
         document.body.appendChild(modal);
         
-        document.getElementById('btnCancelarReatribuir').onclick = () => {
+        document.getElementById('btnCancelarReatribuir').onclick = async () => {
             document.body.removeChild(modal);
         };
         
-        document.getElementById('btnConfirmarReatribuir').onclick = () => {
+        document.getElementById('btnConfirmarReatribuir').onclick = async () => {
             const novoMontador = document.getElementById('selectNovoMontador').value;
             
             vehicle.montador = novoMontador;
@@ -4341,7 +4403,7 @@ class EsperaManager {
             delete vehicle.rotaMontagem;
             delete vehicle.sequenciaAplicacao;
             
-            saveBoth.vehicles(vehicles);
+            await saveBoth.vehicles(vehicles);
             this.loadEspera();
             Dashboard.renderDashboard();
             
@@ -4350,7 +4412,7 @@ class EsperaManager {
         };
     }
     
-    static voltarParaEtapa(vehicleId, etapa) {
+    static async voltarParaEtapa(vehicleId, etapa) {
         const etapaLabel = {
             'desmontagem': 'Desmontagem',
             'aplicacao': 'Aplicação',
@@ -4387,14 +4449,14 @@ class EsperaManager {
         delete vehicle.tentouDesmontarPor;
         delete vehicle.etapaEspera;
         
-        saveBoth.vehicles(vehicles);
+        await saveBoth.vehicles(vehicles);
         this.loadEspera();
         Dashboard.renderDashboard();
         
         alert(`✅ Veículo voltou para ${etapaLabel}!`);
     }
     
-    static voltarFila(vehicleId) {
+    static async voltarFila(vehicleId) {
         if (!confirm('Voltar este veículo para a fila de CADASTRADOS?')) return;
         
         const vehicles = DB.getVehicles();
@@ -4411,7 +4473,7 @@ class EsperaManager {
         delete vehicle.montador;
         delete vehicle.rotaDesmontagem;
         
-        saveBoth.vehicles(vehicles);
+        await saveBoth.vehicles(vehicles);
         this.loadEspera();
         Dashboard.renderDashboard();
         
@@ -4748,7 +4810,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.9-PROD';
+    const VERSAO_ATUAL = 'v23.10-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
