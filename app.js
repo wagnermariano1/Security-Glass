@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.10-PROD - AUTO-REFRESH 30s!
-// Reduz chance de sobrescrever dados! De 10s → 30s como v21.1 que funcionava!
+// Security Glass App - Main JavaScript v23.11-PROD - CONFIG VENDEDORAS!
+// Gestor pode editar concessionária/local das vendedoras! Auto-refresh 30s!
 
-console.log('🔥 Security Glass v23.10-PROD - 30s Refresh!');
+console.log('🔥 Security Glass v23.11-PROD - Config Vendedoras!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -823,6 +823,17 @@ class AuthSystem {
                     el.style.display = '';
                 });
             }
+            
+            // Mostrar tab Config APENAS para gestor (Wagner)
+            if (APP_STATE.currentRole === 'gestor' && APP_STATE.currentUser === 'wagner') {
+                document.querySelectorAll('.gestor-only').forEach(el => {
+                    el.style.display = '';
+                });
+            } else {
+                document.querySelectorAll('.gestor-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
         }
         
         // Mostrar configurações avançadas só para Wagner
@@ -1174,6 +1185,8 @@ class Dashboard {
                     // Aba cadastro vendedora - nada a carregar
                 } else if (targetTab === 'vendedoraRelatorio') {
                     // Aba relatório vendedora - nada a carregar
+                } else if (targetTab === 'config') {
+                    ConfigManager.loadConfig();
                 }
             });
         });
@@ -1235,6 +1248,19 @@ class Dashboard {
         
         // NOVO: Botão adicionar vendedora
         document.getElementById('addVendedoraBtn')?.addEventListener('click', () => {
+            TeamManager.addVendedora();
+        });
+        
+        // NOVO: Config Vendedoras (gestor only)
+        const editVendedoraForm = document.getElementById('editVendedoraForm');
+        if (editVendedoraForm) {
+            editVendedoraForm.onsubmit = (e) => {
+                e.preventDefault();
+                ConfigManager.saveVendedora();
+            };
+        }
+        
+        document.getElementById('addVendedoraConfigBtn')?.addEventListener('click', () => {
             TeamManager.addVendedora();
         });
         
@@ -4810,7 +4836,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.10-PROD';
+    const VERSAO_ATUAL = 'v23.11-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
@@ -4978,6 +5004,123 @@ class VendedoraManager {
         setTimeout(() => URL.revokeObjectURL(url), 100);
         
         alert(`✅ Relatório gerado!\n\n${meusCarros.length} veículo(s)\nArquivo: ${filename}`);
+    }
+}
+
+// Gerenciador de Configurações (só Gestor)
+class ConfigManager {
+    static loadConfig() {
+        this.renderVendedorasList();
+    }
+    
+    static renderVendedorasList() {
+        const team = DB.getTeam();
+        const container = document.getElementById('vendedorasConfigList');
+        
+        if (!team.vendedoras || team.vendedoras.length === 0) {
+            container.innerHTML = '<p style="color: #94a3b8;">Nenhuma vendedora cadastrada ainda.</p>';
+            return;
+        }
+        
+        const html = team.vendedoras.map((v, index) => `
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="display: block; margin-bottom: 4px;">${v.nome}</strong>
+                    <span style="color: #64748b; font-size: 0.9rem;">${v.concessionaria} - ${v.local}</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="ConfigManager.editVendedora(${index})">✏️ Editar</button>
+                    <button class="btn" style="background: #ef4444; color: white;" onclick="ConfigManager.deleteVendedora(${index})">🗑️ Excluir</button>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+    
+    static editVendedora(index) {
+        const team = DB.getTeam();
+        const vendedora = team.vendedoras[index];
+        
+        if (!vendedora) return;
+        
+        // Popular modal
+        document.getElementById('editVendedoraIndex').value = index;
+        document.getElementById('editVendedoraNome').value = vendedora.nome;
+        document.getElementById('editVendedoraLocal').value = vendedora.local;
+        document.getElementById('editVendedoraSenha').value = '';
+        
+        // Popular select de concessionárias
+        const concSelect = document.getElementById('editVendedoraConcessionaria');
+        const concessionarias = DB.getConcessionarias();
+        concSelect.innerHTML = concessionarias.map(c => 
+            `<option value="${c}" ${c === vendedora.concessionaria ? 'selected' : ''}>${c}</option>`
+        ).join('');
+        
+        // Abrir modal
+        document.getElementById('editVendedoraModal').classList.add('active');
+    }
+    
+    static async saveVendedora() {
+        const index = parseInt(document.getElementById('editVendedoraIndex').value);
+        const team = DB.getTeam();
+        
+        if (index < 0 || index >= team.vendedoras.length) return;
+        
+        const nome = document.getElementById('editVendedoraNome').value.trim();
+        const concessionaria = document.getElementById('editVendedoraConcessionaria').value;
+        const local = document.getElementById('editVendedoraLocal').value.trim();
+        const senha = document.getElementById('editVendedoraSenha').value.trim();
+        
+        if (!nome || !concessionaria || !local) {
+            alert('Preencha todos os campos obrigatórios!');
+            return;
+        }
+        
+        // Atualizar dados
+        team.vendedoras[index].nome = nome;
+        team.vendedoras[index].concessionaria = concessionaria;
+        team.vendedoras[index].local = local;
+        
+        // Se digitou nova senha, atualizar
+        if (senha) {
+            team.vendedoras[index].senha = senha;
+        }
+        
+        // Salvar
+        DB.saveTeam(team);
+        if (window.firebase && FirebaseDB.initialized) {
+            await FirebaseDB.saveTeam(team);
+        }
+        
+        // Fechar modal e atualizar lista
+        document.getElementById('editVendedoraModal').classList.remove('active');
+        this.renderVendedorasList();
+        
+        alert('✅ Vendedora atualizada com sucesso!');
+    }
+    
+    static async deleteVendedora(index) {
+        const team = DB.getTeam();
+        const vendedora = team.vendedoras[index];
+        
+        if (!vendedora) return;
+        
+        if (!confirm(`❌ Excluir vendedora ${vendedora.nome}?\n\nIsso não apagará os veículos já cadastrados por ela.`)) {
+            return;
+        }
+        
+        // Remover do array
+        team.vendedoras.splice(index, 1);
+        
+        // Salvar
+        DB.saveTeam(team);
+        if (window.firebase && FirebaseDB.initialized) {
+            await FirebaseDB.saveTeam(team);
+        }
+        
+        this.renderVendedorasList();
+        alert('✅ Vendedora excluída!');
     }
 }
 
