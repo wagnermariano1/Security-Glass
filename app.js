@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.0-PROD - SEM AUTOMAÇÃO!
-// Removida automação 18:40h que causava bugs! Controle manual agora!
+// Security Glass App - Main JavaScript v24.2-PROD - ABA ESPERA CORRIGIDA!
+// Busca Firebase ANTES de modificar na aba Espera! Bug dos 3 dias resolvido!
 
-console.log('🔥 Security Glass v24.0-PROD - Sem Automação!');
+console.log('🔥 Security Glass v24.2-PROD - Aba Espera OK!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -271,43 +271,11 @@ const DB = {
 
 // Helper para salvar em localStorage E Firebase
 const saveBoth = {
-    vehicles: async (vehiclesLocal) => {
-        // CRITICAL: SEMPRE buscar dados ATUAIS do Firebase ANTES de salvar!
-        let vehiclesFinal = vehiclesLocal;
-        
+    vehicles: (vehicles) => {
+        // Simplesmente salvar (Firebase é sempre buscado ANTES de chamar)
+        DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
-            try {
-                const vehiclesFirebase = await FirebaseDB.getVehicles();
-                
-                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
-                    // Merge: atualizar veículos do Firebase com mudanças locais
-                    vehiclesFinal = vehiclesFirebase.map(vFB => {
-                        // Procurar se tem versão local deste veículo
-                        const vLocal = vehiclesLocal.find(vL => vL.id === vFB.id);
-                        // Se tem local, usar local (mais recente), senão Firebase
-                        return vLocal || vFB;
-                    });
-                    
-                    // Adicionar veículos que só existem no local (novos)
-                    vehiclesLocal.forEach(vLocal => {
-                        if (!vehiclesFinal.find(v => v.id === vLocal.id)) {
-                            vehiclesFinal.push(vLocal);
-                        }
-                    });
-                    
-                    console.log('✅ Merge Firebase ← Local concluído');
-                }
-            } catch (error) {
-                console.warn('⚠️ Erro ao buscar Firebase, usando dados locais:', error);
-            }
-        }
-        
-        // Salvar localmente
-        DB.saveVehicles(vehiclesFinal);
-        
-        // Salvar no Firebase
-        if (window.firebase && FirebaseDB.initialized) {
-            vehiclesFinal.forEach(v => FirebaseDB.saveVehicle(v));
+            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
         }
     },
     vehicle: async (vehicle) => {
@@ -4280,8 +4248,21 @@ class EsperaManager {
         `;
     }
     
-    static reatribuir(vehicleId) {
-        const vehicles = DB.getVehicles();
+    static async reatribuir(vehicleId) {
+        // CRITICAL: Buscar dados ATUAIS do Firebase primeiro!
+        let vehicles = DB.getVehicles();
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    vehicles = vehiclesFirebase;
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase:', error);
+            }
+        }
+        
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
         if (!vehicle) return;
@@ -4351,7 +4332,20 @@ class EsperaManager {
         
         if (!confirm(`Voltar este veículo para ${etapaLabel}?`)) return;
         
-        const vehicles = DB.getVehicles();
+        // CRITICAL: Buscar dados ATUAIS do Firebase primeiro!
+        let vehicles = DB.getVehicles();
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    vehicles = vehiclesFirebase;
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase:', error);
+            }
+        }
+        
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
         if (!vehicle) return;
@@ -4389,7 +4383,20 @@ class EsperaManager {
     static async voltarFila(vehicleId) {
         if (!confirm('Voltar este veículo para a fila de CADASTRADOS?')) return;
         
-        const vehicles = DB.getVehicles();
+        // CRITICAL: Buscar dados ATUAIS do Firebase primeiro!
+        let vehicles = DB.getVehicles();
+        if (window.firebase && FirebaseDB.initialized) {
+            try {
+                const vehiclesFirebase = await FirebaseDB.getVehicles();
+                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
+                    vehicles = vehiclesFirebase;
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar Firebase:', error);
+            }
+        }
+        
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
         if (!vehicle) return;
@@ -4740,7 +4747,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.0-PROD';
+    const VERSAO_ATUAL = 'v24.2-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
