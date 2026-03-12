@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v23.13-PROD - CONFIG PERFEITO!
-// Input texto concessionária + Fechar/Cancelar funcionam! Auto-refresh 30s!
+// Security Glass App - Main JavaScript v24.0-PROD - SEM AUTOMAÇÃO!
+// Removida automação 18:40h que causava bugs! Controle manual agora!
 
-console.log('🔥 Security Glass v23.13-PROD - Config Perfeito!');
+console.log('🔥 Security Glass v24.0-PROD - Sem Automação!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1782,109 +1782,6 @@ class Dashboard {
                 this.renderDashboard();
             }
         }, 30000); // 30 segundos (reduz chance de sobrescrever dados)
-        
-        // Verificar automação 18h a cada 5 minutos
-        this.checkEsperaAutomation();
-        setInterval(() => {
-            this.checkEsperaAutomation();
-        }, 5 * 60 * 1000); // 5 minutos
-    }
-    
-    static async checkEsperaAutomation() {
-        const now = new Date();
-        const hour = now.getHours();
-        const minutes = now.getMinutes();
-        
-        // Configuração: horário 18:40h
-        const HORA_LIMITE = 18;
-        const MINUTO_LIMITE = 40;
-        
-        // Verificar se já rodou hoje
-        const hoje = now.toDateString();
-        const ultimaExecucao = localStorage.getItem('ultimaAutomacaoEspera');
-        
-        if (ultimaExecucao === hoje) {
-            // Já rodou hoje, não roda de novo
-            return;
-        }
-        
-        // Só roda entre 18:40h e 18:50h (janela de 10 min)
-        const dentroJanela = (hour === HORA_LIMITE && minutes >= MINUTO_LIMITE && minutes < MINUTO_LIMITE + 10) ||
-                             (hour === HORA_LIMITE + 1 && minutes < 10);
-        
-        if (!dentroJanela) {
-            return; // Fora do horário
-        }
-        
-        // EXECUTAR AUTOMAÇÃO
-        const vehicles = DB.getVehicles();
-        const today = new Date().toDateString();
-        let movidosParaEspera = 0;
-        
-        vehicles.forEach(v => {
-            // Se está CADASTRADO e foi cadastrado HOJE
-            if (v.status === 'cadastrado' && v.cadastroData) {
-                const cadastroDate = new Date(v.cadastroData);
-                const cadastroDateStr = cadastroDate.toDateString();
-                const cadastroHour = cadastroDate.getHours();
-                const cadastroMinutes = cadastroDate.getMinutes();
-                
-                // Verificar se foi cadastrado ANTES das 18:40h
-                const cadastradoAntes = (cadastroHour < HORA_LIMITE) || (cadastroHour === HORA_LIMITE && cadastroMinutes < MINUTO_LIMITE);
-                
-                // Se foi cadastrado HOJE e ANTES das 18:40h (e ainda não desmontou)
-                if (cadastroDateStr === today && cadastradoAntes) {
-                    // Mover para ESPERA
-                    v.status = 'espera';
-                    v.motivoEspera = 'Não desmontado até 18:40h';
-                    v.dataEspera = new Date().toISOString();
-                    v.tentouDesmontarPor = 'Automação (Não tentou)';
-                    v.etapaEspera = 'desmontagem'; // NOVO
-                    
-                    // Limpar montador e rota para reatribuir amanhã
-                    delete v.montador;
-                    delete v.rotaDesmontagem;
-                    
-                    movidosParaEspera++;
-                }
-            }
-        });
-        
-        if (movidosParaEspera > 0) {
-            // CRITICAL: Buscar dados ATUALIZADOS do Firebase ANTES de salvar!
-            const vehiclesAtualizados = await FirebaseDB.getVehicles() || vehicles;
-            
-            // Aplicar mudanças nos dados ATUALIZADOS
-            vehiclesAtualizados.forEach(v => {
-                if (v.status === 'cadastrado' && v.cadastroData) {
-                    const cadastroDate = new Date(v.cadastroData);
-                    const cadastroDateStr = cadastroDate.toDateString();
-                    const cadastroHour = cadastroDate.getHours();
-                    const cadastroMinutes = cadastroDate.getMinutes();
-                    
-                    const cadastradoAntes = (cadastroHour < HORA_LIMITE) || (cadastroHour === HORA_LIMITE && cadastroMinutes < MINUTO_LIMITE);
-                    
-                    if (cadastroDateStr === today && cadastradoAntes) {
-                        v.status = 'espera';
-                        v.motivoEspera = 'Não desmontado até 18:40h';
-                        v.dataEspera = new Date().toISOString();
-                        v.tentouDesmontarPor = 'Automação (Não tentou)';
-                        v.etapaEspera = 'desmontagem';
-                        delete v.montador;
-                        delete v.rotaDesmontagem;
-                    }
-                }
-            });
-            
-            await saveBoth.vehicles(vehiclesAtualizados);
-            this.renderDashboard();
-            
-            // Marcar que já rodou hoje
-            localStorage.setItem('ultimaAutomacaoEspera', hoje);
-            
-            console.log(`✅ Automação 18:40h executada: ${movidosParaEspera} veículo(s) movido(s) para ESPERA`);
-            alert(`⏰ Automação 18:40h\n\n${movidosParaEspera} veículo(s) não desmontado(s) foram movidos para ESPERA.\n\nRotas limpas para reatribuir amanhã!`);
-        }
     }
 }
 
@@ -4843,7 +4740,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v23.13-PROD';
+    const VERSAO_ATUAL = 'v24.0-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
