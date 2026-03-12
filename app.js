@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.2-PROD - ABA ESPERA CORRIGIDA!
-// Busca Firebase ANTES de modificar na aba Espera! Bug dos 3 dias resolvido!
+// Security Glass App - Main JavaScript v24.3-PROD - BATCH WRITE!
+// Firebase Batch ao invés de forEach! SEM rate limit! BUG RESOLVIDO!
 
-console.log('🔥 Security Glass v24.2-PROD - Aba Espera OK!');
+console.log('🔥 Security Glass v24.3-PROD - Batch Write!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -139,6 +139,33 @@ const FirebaseDB = {
         }
     },
     
+    async batchSaveVehicles(vehicles) {
+        if (!this.initialized || !window.firebase) {
+            return DB.saveVehicles(vehicles);
+        }
+        
+        try {
+            const { db, doc, writeBatch } = window.firebase;
+            const batch = writeBatch(db);
+            
+            // Adicionar todas as operações ao batch
+            vehicles.forEach(v => {
+                const vehicleRef = doc(db, 'vehicles', v.id);
+                batch.set(vehicleRef, v);
+            });
+            
+            // Executar batch (1 chamada ao invés de N)
+            await batch.commit();
+            console.log(`✅ Batch salvou ${vehicles.length} veículos`);
+        } catch (error) {
+            console.error('❌ Erro no batch save:', error);
+            // Fallback: tentar salvar um por um
+            for (const v of vehicles) {
+                await this.saveVehicle(v);
+            }
+        }
+    },
+    
     async saveTeam(team) {
         if (!this.initialized || !window.firebase) {
             return DB.saveTeam(team);
@@ -271,11 +298,12 @@ const DB = {
 
 // Helper para salvar em localStorage E Firebase
 const saveBoth = {
-    vehicles: (vehicles) => {
+    vehicles: async (vehicles) => {
         // Simplesmente salvar (Firebase é sempre buscado ANTES de chamar)
         DB.saveVehicles(vehicles);
         if (window.firebase && FirebaseDB.initialized) {
-            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+            // Usar BATCH ao invés de forEach (evita rate limit!)
+            await FirebaseDB.batchSaveVehicles(vehicles);
         }
     },
     vehicle: async (vehicle) => {
@@ -4747,7 +4775,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.2-PROD';
+    const VERSAO_ATUAL = 'v24.3-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
