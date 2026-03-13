@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3-PROD - BATCH WRITE!
-// Firebase Batch ao invés de forEach! SEM rate limit! BUG RESOLVIDO!
+// Security Glass App - Main JavaScript v24.4-PROD - SEM LOCALSTORAGE!
+// localStorage vehicles removido! Firebase ÚNICA fonte! Quota OK!
 
-console.log('🔥 Security Glass v24.3-PROD - Batch Write!');
+console.log('🔥 Security Glass v24.4-PROD - Sem localStorage!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -185,10 +185,12 @@ const FirebaseDB = {
 const DB = {
     getVehicles: () => JSON.parse(localStorage.getItem('vehicles') || '[]'),
     saveVehicles: (vehicles) => {
-        localStorage.setItem('vehicles', JSON.stringify(vehicles));
-        // Sincronizar cada veículo com Firebase
-        if (FirebaseDB.initialized) {
-            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+        // NÃO salvar no localStorage (quota exceeded!)
+        // Firebase é a ÚNICA fonte da verdade
+        try {
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        } catch (e) {
+            console.warn('⚠️ localStorage cheio, ignorando. Firebase é a fonte da verdade.');
         }
     },
     
@@ -4775,7 +4777,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3-PROD';
+    const VERSAO_ATUAL = 'v24.4-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
@@ -4801,6 +4803,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     
     await FirebaseDB.init(); // ✅ ATIVADO PARA PRODUÇÃO
+    
+    // CRITICAL: Limpar localStorage vehicles (pode estar cheio)
+    // Firebase é a ÚNICA fonte da verdade
+    try {
+        localStorage.removeItem('vehicles');
+        console.log('🧹 localStorage vehicles limpo (Firebase é a fonte)');
+    } catch (e) {
+        console.warn('⚠️ Erro ao limpar localStorage:', e);
+    }
+    
     // NÃO inicializar notificações aqui - vai inicializar DEPOIS do login
     PushNotifications.setupForegroundListener(); // ✅ ATIVADO PARA PRODUÇÃO
     console.log('✅ App pronto COM Firebase (PRODUÇÃO)!');
