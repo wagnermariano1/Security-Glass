@@ -43,7 +43,11 @@ const FirebaseDB = {
             snapshot.forEach(doc => {
                 vehicles.push({ id: doc.id, ...doc.data() });
             });
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+            try {
+    localStorage.setItem('vehicles', JSON.stringify(vehicles));
+} catch (e) {
+    console.log('📦 localStorage cheio');
+}
             
             console.log('🔄 Dados sincronizados do Firebase!');
             
