@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5-PROD - LISTENER SEM QUOTA!
-// Try/catch no listener Firebase! Ignora erro localStorage! FINAL!
+// Security Glass App - Main JavaScript v24.4-PROD - SEM LOCALSTORAGE!
+// localStorage vehicles removido! Firebase ÚNICA fonte! Quota OK!
 
-console.log('🔥 Security Glass v24.5-PROD - Listener OK!');
+console.log('🔥 Security Glass v24.4-PROD - Sem localStorage!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -43,15 +43,7 @@ const FirebaseDB = {
             snapshot.forEach(doc => {
                 vehicles.push({ id: doc.id, ...doc.data() });
             });
-            
-            // NÃO salvar no localStorage (quota exceeded!)
-            // Firebase já tem os dados, não precisa duplicar
-            try {
-                localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            } catch (e) {
-                // Ignora erro de quota - Firebase é a fonte
-                console.log('📦 localStorage cheio, usando apenas Firebase');
-            }
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
             
             console.log('🔄 Dados sincronizados do Firebase!');
             
@@ -4785,7 +4777,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5-PROD';
+    const VERSAO_ATUAL = 'v24.4-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
