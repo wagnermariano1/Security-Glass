@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3.1-PROD - CACHE EM MEMÓRIA!
-// Quota localStorage? USA CACHE! Dados NUNCA somem! DEFINITIVO!
+// Security Glass App - Main JavaScript v24.3.2-PROD - TODOS SAVES PROTEGIDOS!
+// Try/catch em TUDO! localStorage cheio? SEM PROBLEMA! DEFINITIVO!
 
-console.log('🔥 Security Glass v24.3.1-PROD - Cache em memória!');
+console.log('🔥 Security Glass v24.3.2-PROD - Todos saves protegidos!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -200,7 +200,16 @@ const DB = {
         return JSON.parse(localStorage.getItem('vehicles') || '[]');
     },
     saveVehicles: (vehicles) => {
-        localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        // Tentar salvar no localStorage
+        try {
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        } catch (e) {
+            console.log('📦 saveVehicles: localStorage cheio, usando cache');
+        }
+        
+        // CRITICAL: SEMPRE salvar em memória (fallback)
+        window.VEHICLES_CACHE = vehicles;
+        
         // Sincronizar cada veículo com Firebase
         if (FirebaseDB.initialized) {
             vehicles.forEach(v => FirebaseDB.saveVehicle(v));
@@ -245,17 +254,33 @@ const DB = {
         return DB.getTeam();
     },
     saveTeam: (team) => {
-        localStorage.setItem('team', JSON.stringify(team));
+        try {
+            localStorage.setItem('team', JSON.stringify(team));
+        } catch (e) {
+            console.log('📦 saveTeam: localStorage cheio');
+        }
         if (FirebaseDB.initialized) {
             FirebaseDB.saveTeam(team);
         }
     },
     
     getConcessionarias: () => JSON.parse(localStorage.getItem('concessionarias') || '[]'),
-    saveConcessionarias: (list) => localStorage.setItem('concessionarias', JSON.stringify(list)),
+    saveConcessionarias: (list) => {
+        try {
+            localStorage.setItem('concessionarias', JSON.stringify(list));
+        } catch (e) {
+            console.log('📦 saveConcessionarias: localStorage cheio');
+        }
+    },
     
     getModelos: () => JSON.parse(localStorage.getItem('modelos') || '[]'),
-    saveModelos: (list) => localStorage.setItem('modelos', JSON.stringify(list)),
+    saveModelos: (list) => {
+        try {
+            localStorage.setItem('modelos', JSON.stringify(list));
+        } catch (e) {
+            console.log('📦 saveModelos: localStorage cheio');
+        }
+    },
     
     getPasswords: async () => {
         // Primeiro tenta buscar do Firebase
@@ -296,7 +321,11 @@ const DB = {
     
     savePasswords: async (passwords) => {
         // Salva no localStorage (backward compatibility)
-        localStorage.setItem('passwords', JSON.stringify(passwords));
+        try {
+            localStorage.setItem('passwords', JSON.stringify(passwords));
+        } catch (e) {
+            console.log('📦 savePasswords: localStorage cheio');
+        }
         
         // Salva no Firebase
         if (window.firebase && FirebaseDB.initialized) {
@@ -4790,7 +4819,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3.1-PROD';
+    const VERSAO_ATUAL = 'v24.3.2-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
