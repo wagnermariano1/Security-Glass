@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3.3-PROD - BATCH CORRETO!
-// DB.saveVehicles usa batch! saveBoth não duplica! SEM rate limit!
+// Security Glass App - Main JavaScript v24.3.4-PROD - SEM DUPLICAÇÃO!
+// saveBoth.vehicle NÃO duplica save! Batch 1x! SEM rate limit! FINAL!
 
-console.log('🔥 Security Glass v24.3.3-PROD - Batch correto!');
+console.log('🔥 Security Glass v24.3.4-PROD - Sem duplicação!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -368,10 +368,9 @@ const saveBoth = {
             vehicles.unshift(vehicle);
         }
         
-        DB.saveVehicles(vehicles);
-        if (window.firebase && FirebaseDB.initialized) {
-            FirebaseDB.saveVehicle(vehicle);
-        }
+        // DB.saveVehicles já salva TUDO no Firebase via batch
+        // NÃO salvar individual de novo!
+        await DB.saveVehicles(vehicles);
     },
     deleteVehicle: async (vehicleId) => {
         // Buscar lista ATUAL do Firebase
@@ -390,9 +389,13 @@ const saveBoth = {
         
         vehicles = vehicles.filter(v => v.id !== vehicleId);
         
-        DB.saveVehicles(vehicles);
+        // DB.saveVehicles já sincroniza com Firebase
+        // Batch vai salvar sem o veículo deletado
+        await DB.saveVehicles(vehicles);
+        
+        // Deletar também do Firebase (específico)
         if (window.firebase && FirebaseDB.initialized) {
-            FirebaseDB.deleteVehicle(vehicleId);
+            await FirebaseDB.deleteVehicle(vehicleId);
         }
     }
 };
@@ -4815,7 +4818,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3.3-PROD';
+    const VERSAO_ATUAL = 'v24.3.4-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
