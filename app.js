@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3.5-PROD - SAVE INDIVIDUAL!
-// saveBoth.vehicle salva SÓ 1 doc! Listener sincroniza! SEM batch! FINAL!
+// Security Glass App - Main JavaScript v24.4-PROD - ESCALÁVEL! 🚀
+// TUDO usa saveBoth.vehicle! SÓ 1 write! Funciona com 2000+ carros! DEFINITIVO!
 
-console.log('🔥 Security Glass v24.3.5-PROD - Save individual!');
+console.log('🔥 Security Glass v24.4-PROD - Escalável!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2470,7 +2470,7 @@ class UpdateStatusModal {
                 vehicle.obsDesmontar = obsDesmontar;
             }
             
-            await saveBoth.vehicles(vehicles);
+            await saveBoth.vehicle(vehicle);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2496,7 +2496,7 @@ class UpdateStatusModal {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'desmontagem'; // NOVO: identifica de onde veio
             
-            await saveBoth.vehicles(vehicles);
+            await saveBoth.vehicle(vehicle);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2518,7 +2518,7 @@ class UpdateStatusModal {
                 vehicle.obsAplicador = obsAplicador;
             }
             
-            await saveBoth.vehicles(vehicles);
+            await saveBoth.vehicle(vehicle);
             Dashboard.renderDashboard();
             
             // Notificação enviada pela Cloud Function automaticamente
@@ -2541,7 +2541,7 @@ class UpdateStatusModal {
                 vehicle.montador = newMontador;
                 vehicle.status = 'aplicado'; // Volta pra fila
                 
-                await saveBoth.vehicles(vehicles);
+                await saveBoth.vehicle(vehicle);
                 Dashboard.renderDashboard();
                 
                 document.getElementById('updateStatusModal').classList.remove('active');
@@ -2574,7 +2574,7 @@ class UpdateStatusModal {
             
             console.log(`Salvando ${vehicle.montagemFotos.length} fotos`); // Debug
             
-            await saveBoth.vehicles(vehicles);
+            await saveBoth.vehicle(vehicle);
             Dashboard.renderDashboard();
             
             // NOVO: Notificar vendedora se foi ela quem cadastrou
@@ -4818,7 +4818,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3.5-PROD';
+    const VERSAO_ATUAL = 'v24.4-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
