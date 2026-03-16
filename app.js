@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.0-PRODUCTION 🎉🎉🎉
-// SISTEMA COMPLETO! Rotas múltiplas ✅ Dashboard ✅ Finalizados ordenados ✅
+// Security Glass App - Main JavaScript v24.7-FINAL 🎉
+// Coluna finalizados corrigida! Montador vê carros que participou!
 
-console.log('🔥 Security Glass v25.0-PRODUCTION!');
+console.log('🔥 Security Glass v24.7-FINAL!');
 
 // Firebase Database Layer
 const FirebaseDB = {
