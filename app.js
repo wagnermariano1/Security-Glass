@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.3-UPDATE 🔄
-// Botão ATUALIZAR APP! + Debug campo rota! + Delay 300ms!
+// Security Glass App - Main JavaScript v24.5.4-DEBUG2 🔍
+// Debug COMPLETO! Remove dispatchEvent! Logs detalhados!
 
-console.log('🔥 Security Glass v24.5.3-UPDATE!');
+console.log('🔥 Security Glass v24.5.4-DEBUG2!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3731,9 +3731,6 @@ class RotaDesmontagemManager {
         console.log(`✏️ AUTO-PREENCHIDO: Rota ${maiorNumero + 1} para carro ${vehicleId}`);
         console.log(`   Campo ID: rotaDesm_${vehicleId}, valor agora: "${inputRota.value}"`);
         
-        // Forçar atualização visual
-        inputRota.dispatchEvent(new Event('change', { bubbles: true }));
-        
         console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
     
@@ -3806,11 +3803,18 @@ class RotaDesmontagemManager {
         let saved = 0;
         const rotasPorMontador = {}; // Para contar carros por montador (notificações)
         
+        console.log(`🔎 INICIANDO SAVE - Total cadastrados: ${cadastrados.length}`);
+        
         for (const v of cadastrados) {
+            console.log(`\n🔍 Processando ${v.modelo} (ID: ${v.id}):`);
+            
             const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             
-            console.log(`🔍 Carro ${v.modelo}: rotaInput=${rotaInput?.value}, montSelect=${montSelect?.value}`);
+            console.log(`   rotaInput existe? ${!!rotaInput}`);
+            console.log(`   rotaInput.value = "${rotaInput?.value}"`);
+            console.log(`   montSelect existe? ${!!montSelect}`);
+            console.log(`   montSelect.value = "${montSelect?.value}"`);
             
             if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
                 v.rotaDesmontagem = parseInt(rotaInput.value);
@@ -4920,7 +4924,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.3-UPDATE';
+    const VERSAO_ATUAL = 'v24.5.4-DEBUG2';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
