@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3.4-PROD - SEM DUPLICAÇÃO!
-// saveBoth.vehicle NÃO duplica save! Batch 1x! SEM rate limit! FINAL!
+// Security Glass App - Main JavaScript v24.3.5-PROD - SAVE INDIVIDUAL!
+// saveBoth.vehicle salva SÓ 1 doc! Listener sincroniza! SEM batch! FINAL!
 
-console.log('🔥 Security Glass v24.3.4-PROD - Sem duplicação!');
+console.log('🔥 Security Glass v24.3.5-PROD - Save individual!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -347,19 +347,8 @@ const saveBoth = {
         await DB.saveVehicles(vehicles);
     },
     vehicle: async (vehicle) => {
-        // Buscar lista ATUAL do Firebase
-        let vehicles = DB.getVehicles();
-        
-        if (window.firebase && FirebaseDB.initialized) {
-            try {
-                const vehiclesFirebase = await FirebaseDB.getVehicles();
-                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
-                    vehicles = vehiclesFirebase;
-                }
-            } catch (error) {
-                console.warn('⚠️ Erro ao buscar Firebase:', error);
-            }
-        }
+        // Atualizar cache local
+        let vehicles = window.VEHICLES_CACHE || DB.getVehicles();
         
         const index = vehicles.findIndex(v => v.id === vehicle.id);
         if (index >= 0) {
@@ -368,9 +357,19 @@ const saveBoth = {
             vehicles.unshift(vehicle);
         }
         
-        // DB.saveVehicles já salva TUDO no Firebase via batch
-        // NÃO salvar individual de novo!
-        await DB.saveVehicles(vehicles);
+        // Atualizar cache
+        window.VEHICLES_CACHE = vehicles;
+        try {
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        } catch (e) {
+            console.log('📦 vehicle: localStorage cheio');
+        }
+        
+        // Salvar SÓ este veículo no Firebase (individual)
+        // Listener vai atualizar todos automaticamente
+        if (window.firebase && FirebaseDB.initialized) {
+            await FirebaseDB.saveVehicle(vehicle);
+        }
     },
     deleteVehicle: async (vehicleId) => {
         // Buscar lista ATUAL do Firebase
@@ -2913,7 +2912,8 @@ class VehiclesManager {
     static renderList(vehicles) {
         const list = document.getElementById('vehiclesList');
         
-        if (vehicles.length === 0) {
+        // Proteção contra undefined
+        if (!vehicles || vehicles.length === 0) {
             list.innerHTML = '<div class="empty-state"><p>Nenhum veículo encontrado</p></div>';
             return;
         }
@@ -4818,7 +4818,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3.4-PROD';
+    const VERSAO_ATUAL = 'v24.3.5-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
