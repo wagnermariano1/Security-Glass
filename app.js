@@ -1452,7 +1452,18 @@ class Dashboard {
         let cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         let desmontados = vehicles.filter(v => v.status === 'desmontado');
         let aplicados = vehicles.filter(v => v.status === 'aplicado');
+        
+        // Debug finalizados
+        const montados = vehicles.filter(v => v.status === 'montado');
+        console.log(`📊 Total montados: ${montados.length}`);
+        console.log('Montados:', montados.map(v => ({
+            modelo: v.modelo,
+            montagemData: v.montagemData,
+            isCurrentMonth: Utils.isCurrentMonth(v.montagemData)
+        })));
+        
         let finalizados = vehicles.filter(v => v.status === 'montado' && Utils.isCurrentMonth(v.montagemData));
+        console.log(`✅ Finalizados (mês atual): ${finalizados.length}`);
         
         // Filtros por permissão
         if (role === 'montador') {
@@ -1496,11 +1507,20 @@ class Dashboard {
             });
             
             // FILTRAR FINALIZADOS: vê que ELE desmontou, aplicou OU montou
+            console.log('Finalizados ANTES filtro montador:', finalizados.map(v => ({
+                modelo: v.modelo,
+                montadoPor: v.montadoPor,
+                desmontadoPor: v.desmontadoPor,
+                aplicadoPor: v.aplicadoPor
+            })));
+            
             finalizados = finalizados.filter(v => 
                 v.desmontadoPor === currentUserName || 
                 v.aplicadoPor === currentUserName ||
                 v.montadoPor === currentUserName
             );
+            
+            console.log('Finalizados DEPOIS filtro montador:', finalizados.map(v => v.modelo));
             
             // Não vê desmontados (são para aplicadores)
             desmontados = [];
@@ -4956,7 +4976,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.6.1-COMPLETE';
+    const VERSAO_ATUAL = 'v24.6.3-DEBUG2';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
