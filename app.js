@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.3.2-PROD - TODOS SAVES PROTEGIDOS!
-// Try/catch em TUDO! localStorage cheio? SEM PROBLEMA! DEFINITIVO!
+// Security Glass App - Main JavaScript v24.3.3-PROD - BATCH CORRETO!
+// DB.saveVehicles usa batch! saveBoth não duplica! SEM rate limit!
 
-console.log('🔥 Security Glass v24.3.2-PROD - Todos saves protegidos!');
+console.log('🔥 Security Glass v24.3.3-PROD - Batch correto!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -199,7 +199,7 @@ const DB = {
         }
         return JSON.parse(localStorage.getItem('vehicles') || '[]');
     },
-    saveVehicles: (vehicles) => {
+    saveVehicles: async (vehicles) => {
         // Tentar salvar no localStorage
         try {
             localStorage.setItem('vehicles', JSON.stringify(vehicles));
@@ -210,9 +210,9 @@ const DB = {
         // CRITICAL: SEMPRE salvar em memória (fallback)
         window.VEHICLES_CACHE = vehicles;
         
-        // Sincronizar cada veículo com Firebase
+        // Sincronizar com Firebase usando BATCH (evita rate limit!)
         if (FirebaseDB.initialized) {
-            vehicles.forEach(v => FirebaseDB.saveVehicle(v));
+            await FirebaseDB.batchSaveVehicles(vehicles);
         }
     },
     
@@ -343,12 +343,8 @@ const DB = {
 // Helper para salvar em localStorage E Firebase
 const saveBoth = {
     vehicles: async (vehicles) => {
-        // Simplesmente salvar (Firebase é sempre buscado ANTES de chamar)
-        DB.saveVehicles(vehicles);
-        if (window.firebase && FirebaseDB.initialized) {
-            // Usar BATCH ao invés de forEach (evita rate limit!)
-            await FirebaseDB.batchSaveVehicles(vehicles);
-        }
+        // DB.saveVehicles já chama batch, não precisa chamar de novo!
+        await DB.saveVehicles(vehicles);
     },
     vehicle: async (vehicle) => {
         // Buscar lista ATUAL do Firebase
@@ -4819,7 +4815,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.3.2-PROD';
+    const VERSAO_ATUAL = 'v24.3.3-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
