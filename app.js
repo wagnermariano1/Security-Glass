@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.4.1-PROD - SEM BATCH! 🚀
-// REMOVIDO batch de Aba Espera! SÓ saves individuais! INSTANTÂNEO!
+// Security Glass App - Main JavaScript v24.4.2-PROD - ROTAS CORRIGIDAS! 🚀
+// Loop salva CADA veículo! Variável `vehicle` corrigida! AGORA VAI!
 
-console.log('🔥 Security Glass v24.4.1-PROD - Sem batch!');
+console.log('🔥 Security Glass v24.4.2-PROD - Rotas corrigidas!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3739,13 +3739,16 @@ class RotaDesmontagemManager {
         let saved = 0;
         const rotasPorMontador = {}; // Para contar carros por montador (notificações)
         
-        cadastrados.forEach(v => {
+        for (const v of cadastrados) {
             const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             
             if (rotaInput && montSelect && montSelect.value) {
                 v.rotaDesmontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
+                
+                // Salvar este veículo
+                await saveBoth.vehicle(v);
                 
                 // Contar para notificação
                 if (!rotasPorMontador[v.montador]) {
@@ -3755,9 +3758,8 @@ class RotaDesmontagemManager {
                 
                 saved++;
             }
-        });
+        }
         
-        await saveBoth.vehicle(vehicle);
         Dashboard.renderDashboard();
         
         // Enviar notificações para montadores
@@ -3970,18 +3972,18 @@ class RotaAplicacaoManager {
         
         // Se passou na validação, salvar
         let saved = 0;
-        desmontados.forEach(v => {
+        for (const v of desmontados) {
             const seqInput = document.getElementById(`seq_${v.id}`);
             const appSelect = document.getElementById(`app_${v.id}`);
             
             if (seqInput && appSelect) {
                 v.sequenciaAplicacao = parseInt(seqInput.value);
                 v.aplicador = appSelect.value;
+                await saveBoth.vehicle(v);
                 saved++;
             }
-        });
+        }
         
-        await saveBoth.vehicle(vehicle);
         Dashboard.renderDashboard();
         
         // Notificar aplicadores
@@ -4193,18 +4195,18 @@ class RotaMontagemManager {
         
         // Se passou na validação, salvar
         let saved = 0;
-        aplicados.forEach(v => {
+        for (const v of aplicados) {
             const rotaInput = document.getElementById(`rotaMont_${v.id}`);
             const montSelect = document.getElementById(`montMont_${v.id}`);
             
             if (rotaInput && montSelect) {
                 v.rotaMontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
+                await saveBoth.vehicle(v);
                 saved++;
             }
-        });
+        }
         
-        await saveBoth.vehicle(vehicle);
         Dashboard.renderDashboard();
         
         // Notificar montadores
@@ -4818,7 +4820,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.4.1-PROD';
+    const VERSAO_ATUAL = 'v24.4.2-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
