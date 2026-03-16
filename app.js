@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.7-FINAL 🎉
-// Coluna finalizados corrigida! Montador vê carros que participou!
+// Security Glass App - Main JavaScript v24.8-FILTROS 📊
+// Filtros na Aba Veículos! Status, Período, Pessoa! Contador!
 
-console.log('🔥 Security Glass v24.7-FINAL!');
+console.log('🔥 Security Glass v24.8-FILTROS!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1292,7 +1292,20 @@ class Dashboard {
         });
 
         document.getElementById('searchInput')?.addEventListener('input', (e) => {
-            VehiclesManager.search(e.target.value);
+            VehiclesManager.applyFilters();
+        });
+        
+        // NOVO: Eventos dos filtros
+        document.getElementById('filterStatus')?.addEventListener('change', () => {
+            VehiclesManager.applyFilters();
+        });
+        
+        document.getElementById('filterPeriodo')?.addEventListener('change', () => {
+            VehiclesManager.applyFilters();
+        });
+        
+        document.getElementById('filterPessoa')?.addEventListener('change', () => {
+            VehiclesManager.applyFilters();
         });
 
         document.getElementById('reportMonth')?.addEventListener('change', () => {
@@ -2919,56 +2932,104 @@ class VehicleEditModal {
 // Gerenciador de Veículos
 class VehiclesManager {
     static loadVehiclesList() {
+        this.applyFilters();
+    }
+    
+    static applyFilters() {
         let vehicles = DB.getVehicles();
         const role = APP_STATE.currentRole;
         const currentUserName = APP_STATE.currentUserFullName;
         
-        // FILTRAR por role
+        // FILTRAR por role PRIMEIRO
         if (role === 'montador') {
-            // Montador só vê carros que ELE desmontou OU montou
             vehicles = vehicles.filter(v => 
                 v.desmontadoPor === currentUserName || 
                 v.montadoPor === currentUserName ||
-                v.montador === currentUserName // Ou que está atribuído a ele
+                v.montador === currentUserName ||
+                v.aplicadoPor === currentUserName
             );
         } else if (role === 'aplicador') {
-            // Aplicador só vê carros que ELE aplicou
             vehicles = vehicles.filter(v => 
                 v.aplicadoPor === currentUserName ||
-                v.aplicador === currentUserName // Ou que está atribuído a ele
+                v.aplicador === currentUserName ||
+                v.desmontadoPor === currentUserName
             );
         }
-        // Vinicius (gerente) vê TODOS
+        
+        // Filtro STATUS
+        const filterStatus = document.getElementById('filterStatus')?.value || 'todos';
+        if (filterStatus !== 'todos') {
+            vehicles = vehicles.filter(v => v.status === filterStatus);
+        }
+        
+        // Filtro PERÍODO
+        const filterPeriodo = document.getElementById('filterPeriodo')?.value || 'todos';
+        if (filterPeriodo !== 'todos') {
+            const now = new Date();
+            const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            vehicles = vehicles.filter(v => {
+                // Usar data mais recente do veículo
+                const dataVeiculo = new Date(v.montagemData || v.aplicacaoData || v.desmontagemData || v.cadastroData);
+                
+                if (filterPeriodo === 'hoje') {
+                    return dataVeiculo >= hoje;
+                } else if (filterPeriodo === 'semana') {
+                    const semanaAtras = new Date(hoje);
+                    semanaAtras.setDate(semanaAtras.getDate() - 7);
+                    return dataVeiculo >= semanaAtras;
+                } else if (filterPeriodo === 'mes') {
+                    return dataVeiculo.getMonth() === now.getMonth() && 
+                           dataVeiculo.getFullYear() === now.getFullYear();
+                } else if (filterPeriodo === 'mes-passado') {
+                    const mesPassado = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    return dataVeiculo.getMonth() === mesPassado.getMonth() && 
+                           dataVeiculo.getFullYear() === mesPassado.getFullYear();
+                }
+                return true;
+            });
+        }
+        
+        // Filtro PESSOA (só para montador/aplicador)
+        const filterPessoa = document.getElementById('filterPessoa')?.value || 'todos';
+        if (filterPessoa !== 'todos' && (role === 'montador' || role === 'aplicador')) {
+            if (filterPessoa === 'desmontei') {
+                vehicles = vehicles.filter(v => v.desmontadoPor === currentUserName);
+            } else if (filterPessoa === 'apliquei') {
+                vehicles = vehicles.filter(v => v.aplicadoPor === currentUserName);
+            } else if (filterPessoa === 'montei') {
+                vehicles = vehicles.filter(v => v.montadoPor === currentUserName);
+            }
+        }
+        
+        // Filtro BUSCA (se tiver texto no searchInput)
+        const searchQuery = document.getElementById('searchInput')?.value || '';
+        if (searchQuery) {
+            vehicles = vehicles.filter(v => 
+                v.chassi.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                v.modelo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                v.concessionaria.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (v.observacoes && v.observacoes.toLowerCase().includes(searchQuery.toLowerCase()))
+            );
+        }
+        
+        // Atualizar contador
+        const countElement = document.getElementById('countVehicles');
+        if (countElement) {
+            countElement.textContent = `${vehicles.length} ${vehicles.length === 1 ? 'veículo' : 'veículos'}`;
+        }
+        
+        // Mostrar/esconder filtro de pessoa
+        const filterPessoaContainer = document.getElementById('filterPessoaContainer');
+        if (filterPessoaContainer) {
+            filterPessoaContainer.style.display = (role === 'montador' || role === 'aplicador') ? 'block' : 'none';
+        }
         
         this.renderList(vehicles);
     }
 
     static search(query) {
-        let vehicles = DB.getVehicles();
-        const role = APP_STATE.currentRole;
-        const currentUserName = APP_STATE.currentUserFullName;
-        
-        // FILTRAR por role ANTES de buscar
-        if (role === 'montador') {
-            vehicles = vehicles.filter(v => 
-                v.desmontadoPor === currentUserName || 
-                v.montadoPor === currentUserName ||
-                v.montador === currentUserName
-            );
-        } else if (role === 'aplicador') {
-            vehicles = vehicles.filter(v => 
-                v.aplicadoPor === currentUserName ||
-                v.aplicador === currentUserName
-            );
-        }
-        
-        const filtered = vehicles.filter(v => 
-            v.chassi.toLowerCase().includes(query.toLowerCase()) ||
-            v.modelo.toLowerCase().includes(query.toLowerCase()) ||
-            v.concessionaria.toLowerCase().includes(query.toLowerCase()) ||
-            (v.observacoes && v.observacoes.toLowerCase().includes(query.toLowerCase()))
-        );
-        this.renderList(filtered);
+        this.applyFilters();
     }
 
     static renderList(vehicles) {
@@ -4950,7 +5011,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.7-FINAL';
+    const VERSAO_ATUAL = 'v24.8-FILTROS';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
