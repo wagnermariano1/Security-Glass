@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.1-DELAY 🔧
-// 300ms delay entre saves! Evita CORS/rate limit! RESOLVE!
+// Security Glass App - Main JavaScript v24.5.2-FIX 🔧
+// NÃO recalcula se campo já tem valor! RESOLVE campo vazio! + delay 300ms!
 
-console.log('🔥 Security Glass v24.5.1-DELAY!');
+console.log('🔥 Security Glass v24.5.2-FIX!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3626,6 +3626,12 @@ class RotaDesmontagemManager {
             return;
         }
         
+        // CRITICAL: Se campo JÁ TEM valor, NÃO recalcular!
+        if (inputRota.value && inputRota.value.trim() !== '') {
+            console.log(`⏭️ MANTENDO rota ${inputRota.value} para ${vehicleId} (já preenchido)`);
+            return;
+        }
+        
         // Desbloquear input
         inputRota.removeAttribute('readonly');
         
@@ -3897,6 +3903,11 @@ class RotaAplicacaoManager {
             return;
         }
         
+        // CRITICAL: Se campo JÁ TEM valor, NÃO recalcular!
+        if (inputSeq.value && inputSeq.value.trim() !== '') {
+            return;
+        }
+        
         // Desbloquear input
         inputSeq.removeAttribute('readonly');
         
@@ -4123,6 +4134,11 @@ class RotaMontagemManager {
         if (!novoMontador) {
             inputRota.value = '';
             inputRota.setAttribute('readonly', 'readonly');
+            return;
+        }
+        
+        // CRITICAL: Se campo JÁ TEM valor, NÃO recalcular!
+        if (inputRota.value && inputRota.value.trim() !== '') {
             return;
         }
         
@@ -4845,7 +4861,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.1-DELAY';
+    const VERSAO_ATUAL = 'v24.5.2-FIX';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
