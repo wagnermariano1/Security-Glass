@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.4-DEBUG2 🔍
-// Debug COMPLETO! Remove dispatchEvent! Logs detalhados!
+// Security Glass App - Main JavaScript v24.5.5-TRACE 🔍🔍
+// TRACE completo! Vamos pegar quem limpa o campo!
 
-console.log('🔥 Security Glass v24.5.4-DEBUG2!');
+console.log('🔥 Security Glass v24.5.5-TRACE!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3668,14 +3668,20 @@ class RotaDesmontagemManager {
     static recalcularRota(vehicleId) {
         const vehicles = DB.getVehicles();
         
+        console.log(`🔧 recalcularRota chamado para ${vehicleId}`);
+        
         // Pegar montador selecionado NO DOM
         const montadorSelect = document.getElementById(`montDesm_${vehicleId}`);
         const novoMontador = montadorSelect.value;
         
         const inputRota = document.getElementById(`rotaDesm_${vehicleId}`);
         
+        console.log(`   Montador atual: "${novoMontador}"`);
+        console.log(`   Rota atual: "${inputRota.value}"`);
+        
         // Se selecionou "Selecione montador", limpar número e bloquear
         if (!novoMontador) {
+            console.log(`   ❌ LIMPANDO rota (montador vazio)`);
             inputRota.value = '';
             inputRota.setAttribute('readonly', 'readonly');
             return;
@@ -3683,9 +3689,11 @@ class RotaDesmontagemManager {
         
         // CRITICAL: Se campo JÁ TEM valor, NÃO recalcular!
         if (inputRota.value && inputRota.value.trim() !== '') {
-            console.log(`⏭️ MANTENDO rota ${inputRota.value} para ${vehicleId} (já preenchido)`);
+            console.log(`   ⏭️ MANTENDO rota ${inputRota.value} (já preenchido)`);
             return;
         }
+        
+        console.log(`   ✅ Calculando nova rota...`);
         
         // Desbloquear input
         inputRota.removeAttribute('readonly');
@@ -4924,7 +4932,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.4-DEBUG2';
+    const VERSAO_ATUAL = 'v24.5.5-TRACE';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
