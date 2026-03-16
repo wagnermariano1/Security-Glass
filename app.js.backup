@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.4.1-PROD - SEM BATCH! 🚀
-// REMOVIDO batch de Aba Espera! SÓ saves individuais! INSTANTÂNEO!
+// Security Glass App - Main JavaScript v24.4-PROD - ESCALÁVEL! 🚀
+// TUDO usa saveBoth.vehicle! SÓ 1 write! Funciona com 2000+ carros! DEFINITIVO!
 
-console.log('🔥 Security Glass v24.4.1-PROD - Sem batch!');
+console.log('🔥 Security Glass v24.4-PROD - Escalável!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1740,7 +1740,7 @@ class Dashboard {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'aplicacao'; // Identifica que veio da aplicação
             
-            await saveBoth.vehicle(vehicle);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             document.body.removeChild(modal);
@@ -1805,7 +1805,7 @@ class Dashboard {
             vehicle.tentouDesmontarPor = APP_STATE.currentUserFullName;
             vehicle.etapaEspera = 'montagem'; // Identifica que veio da montagem
             
-            await saveBoth.vehicle(vehicle);
+            await saveBoth.vehicles(vehicles);
             Dashboard.renderDashboard();
             
             document.body.removeChild(modal);
@@ -3757,7 +3757,7 @@ class RotaDesmontagemManager {
             }
         });
         
-        await saveBoth.vehicle(vehicle);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Enviar notificações para montadores
@@ -3981,7 +3981,7 @@ class RotaAplicacaoManager {
             }
         });
         
-        await saveBoth.vehicle(vehicle);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar aplicadores
@@ -4204,7 +4204,7 @@ class RotaMontagemManager {
             }
         });
         
-        await saveBoth.vehicle(vehicle);
+        await saveBoth.vehicles(vehicles);
         Dashboard.renderDashboard();
         
         // Notificar montadores
@@ -4327,7 +4327,7 @@ class EsperaManager {
                 const vehiclesFirebase = await FirebaseDB.getVehicles();
                 if (vehiclesFirebase && vehiclesFirebase.length > 0) {
                     vehicles = vehiclesFirebase;
-                    // Cache já atualizado pelo listener
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
                 }
             } catch (error) {
                 console.warn('⚠️ Erro ao buscar Firebase:', error);
@@ -4385,7 +4385,7 @@ class EsperaManager {
             delete vehicle.rotaMontagem;
             delete vehicle.sequenciaAplicacao;
             
-            await saveBoth.vehicle(vehicle);
+            await saveBoth.vehicles(vehicles);
             this.loadEspera();
             Dashboard.renderDashboard();
             
@@ -4410,7 +4410,7 @@ class EsperaManager {
                 const vehiclesFirebase = await FirebaseDB.getVehicles();
                 if (vehiclesFirebase && vehiclesFirebase.length > 0) {
                     vehicles = vehiclesFirebase;
-                    // Cache já atualizado pelo listener
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
                 }
             } catch (error) {
                 console.warn('⚠️ Erro ao buscar Firebase:', error);
@@ -4444,7 +4444,7 @@ class EsperaManager {
         delete vehicle.tentouDesmontarPor;
         delete vehicle.etapaEspera;
         
-        await saveBoth.vehicle(vehicle);
+        await saveBoth.vehicles(vehicles);
         this.loadEspera();
         Dashboard.renderDashboard();
         
@@ -4461,7 +4461,7 @@ class EsperaManager {
                 const vehiclesFirebase = await FirebaseDB.getVehicles();
                 if (vehiclesFirebase && vehiclesFirebase.length > 0) {
                     vehicles = vehiclesFirebase;
-                    // Cache já atualizado pelo listener
+                    DB.saveVehicles(vehicles); // Atualiza localStorage
                 }
             } catch (error) {
                 console.warn('⚠️ Erro ao buscar Firebase:', error);
@@ -4481,7 +4481,7 @@ class EsperaManager {
         delete vehicle.montador;
         delete vehicle.rotaDesmontagem;
         
-        await saveBoth.vehicle(vehicle);
+        await saveBoth.vehicles(vehicles);
         this.loadEspera();
         Dashboard.renderDashboard();
         
@@ -4818,7 +4818,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.4.1-PROD';
+    const VERSAO_ATUAL = 'v24.4-PROD';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
