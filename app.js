@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5-FINAL 🎉
-// TUDO CORRIGIDO! Rotas múltiplas ✅ Dashboard finalizados ✅ SISTEMA COMPLETO!
+// Security Glass App - Main JavaScript v24.5.1-DEBUG 🔍
+// Debug de rotas múltiplas! Logs detalhados!
 
-console.log('🔥 Security Glass v24.5-FINAL!');
+console.log('🔥 Security Glass v24.5.1-DEBUG!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3667,6 +3667,7 @@ class RotaDesmontagemManager {
         
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
+        console.log(`✏️ AUTO-PREENCHIDO: Rota ${maiorNumero + 1} para carro ${vehicleId}`);
         
         console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
@@ -3744,9 +3745,13 @@ class RotaDesmontagemManager {
             const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             
+            console.log(`🔍 Carro ${v.modelo}: rotaInput=${rotaInput?.value}, montSelect=${montSelect?.value}`);
+            
             if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
                 v.rotaDesmontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
+                
+                console.log(`💾 SALVANDO ${v.modelo}: Rota ${v.rotaDesmontagem}, Montador ${v.montador}`);
                 
                 // Salvar este veículo
                 await saveBoth.vehicle(v);
@@ -3758,6 +3763,8 @@ class RotaDesmontagemManager {
                 rotasPorMontador[v.montador].push(v);
                 
                 saved++;
+            } else {
+                console.log(`⏭️ PULANDO ${v.modelo}: Rota ou montador vazio`);
             }
         }
         
@@ -4821,7 +4828,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5-FINAL';
+    const VERSAO_ATUAL = 'v24.5.1-DEBUG';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
