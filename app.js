@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.4.2-PROD - ROTAS CORRIGIDAS! 🚀
-// Loop salva CADA veículo! Variável `vehicle` corrigida! AGORA VAI!
+// Security Glass App - Main JavaScript v24.5-FINAL 🎉
+// TUDO CORRIGIDO! Rotas múltiplas ✅ Dashboard finalizados ✅ SISTEMA COMPLETO!
 
-console.log('🔥 Security Glass v24.4.2-PROD - Rotas corrigidas!');
+console.log('🔥 Security Glass v24.5-FINAL!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -530,6 +530,7 @@ const Utils = {
     },
     
     isCurrentMonth: (date) => {
+        if (!date) return false; // Proteção se data for undefined
         const d = new Date(date);
         const now = new Date();
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
@@ -3743,7 +3744,7 @@ class RotaDesmontagemManager {
             const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
             const montSelect = document.getElementById(`montDesm_${v.id}`);
             
-            if (rotaInput && montSelect && montSelect.value) {
+            if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
                 v.rotaDesmontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
                 
@@ -3976,7 +3977,7 @@ class RotaAplicacaoManager {
             const seqInput = document.getElementById(`seq_${v.id}`);
             const appSelect = document.getElementById(`app_${v.id}`);
             
-            if (seqInput && appSelect) {
+            if (seqInput && seqInput.value && appSelect && appSelect.value) {
                 v.sequenciaAplicacao = parseInt(seqInput.value);
                 v.aplicador = appSelect.value;
                 await saveBoth.vehicle(v);
@@ -4199,7 +4200,7 @@ class RotaMontagemManager {
             const rotaInput = document.getElementById(`rotaMont_${v.id}`);
             const montSelect = document.getElementById(`montMont_${v.id}`);
             
-            if (rotaInput && montSelect) {
+            if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
                 v.rotaMontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
                 await saveBoth.vehicle(v);
@@ -4820,7 +4821,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.4.2-PROD';
+    const VERSAO_ATUAL = 'v24.5-FINAL';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
