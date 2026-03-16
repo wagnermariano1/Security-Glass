@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.6-FINAL 🎉
-// CAPTURA valores ANTES do loop! NÃO lê DOM durante save! RESOLVE!
+// Security Glass App - Main JavaScript v24.6.1-COMPLETE 🎉🎉
+// TODAS as rotas corrigidas! Desmontagem + Aplicação + Montagem! COMPLETO!
 
-console.log('🔥 Security Glass v24.6-FINAL!');
+console.log('🔥 Security Glass v24.6.1-COMPLETE!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -4034,21 +4034,31 @@ class RotaAplicacaoManager {
         const vehicles = DB.getVehicles();
         const desmontados = vehicles.filter(v => v.status === 'desmontado');
         
+        // CRITICAL: Capturar valores ANTES
+        const valoresCampos = new Map();
+        for (const v of desmontados) {
+            const seqInput = document.getElementById(`seq_${v.id}`);
+            const appSelect = document.getElementById(`app_${v.id}`);
+            valoresCampos.set(v.id, {
+                seq: seqInput?.value || '',
+                aplicador: appSelect?.value || ''
+            });
+        }
+        
         // VALIDAR: verificar números duplicados por aplicador
         const rotasPorAplicador = {};
         let temDuplicado = false;
         let mensagemErro = '';
         
         desmontados.forEach(v => {
-            const seqInput = document.getElementById(`seq_${v.id}`);
-            const appSelect = document.getElementById(`app_${v.id}`);
+            const campos = valoresCampos.get(v.id);
             
-            if (seqInput && appSelect) {
-                const rota = parseInt(seqInput.value);
-                const aplicador = appSelect.value;
+            if (campos) {
+                const rota = parseInt(campos.seq);
+                const aplicador = campos.aplicador;
                 
                 // IGNORAR se não tem aplicador OU número inválido
-                if (!aplicador || isNaN(rota) || !seqInput.value) {
+                if (!aplicador || isNaN(rota) || !campos.seq) {
                     return; // Pula este carro
                 }
                 
@@ -4074,12 +4084,11 @@ class RotaAplicacaoManager {
         // Se passou na validação, salvar
         let saved = 0;
         for (const v of desmontados) {
-            const seqInput = document.getElementById(`seq_${v.id}`);
-            const appSelect = document.getElementById(`app_${v.id}`);
+            const campos = valoresCampos.get(v.id);
             
-            if (seqInput && seqInput.value && appSelect && appSelect.value) {
-                v.sequenciaAplicacao = parseInt(seqInput.value);
-                v.aplicador = appSelect.value;
+            if (campos && campos.seq && campos.aplicador) {
+                v.sequenciaAplicacao = parseInt(campos.seq);
+                v.aplicador = campos.aplicador;
                 await saveBoth.vehicle(v);
                 
                 // Aguardar entre saves
@@ -4268,21 +4277,31 @@ class RotaMontagemManager {
         const vehicles = DB.getVehicles();
         const aplicados = vehicles.filter(v => v.status === 'aplicado');
         
+        // CRITICAL: Capturar valores ANTES
+        const valoresCampos = new Map();
+        for (const v of aplicados) {
+            const rotaInput = document.getElementById(`rotaMont_${v.id}`);
+            const montSelect = document.getElementById(`montMont_${v.id}`);
+            valoresCampos.set(v.id, {
+                rota: rotaInput?.value || '',
+                montador: montSelect?.value || ''
+            });
+        }
+        
         // VALIDAR: verificar números duplicados por montador
         const rotasPorMontador = {};
         let temDuplicado = false;
         let mensagemErro = '';
         
         aplicados.forEach(v => {
-            const rotaInput = document.getElementById(`rotaMont_${v.id}`);
-            const montSelect = document.getElementById(`montMont_${v.id}`);
+            const campos = valoresCampos.get(v.id);
             
-            if (rotaInput && montSelect) {
-                const rota = parseInt(rotaInput.value);
-                const montador = montSelect.value;
+            if (campos) {
+                const rota = parseInt(campos.rota);
+                const montador = campos.montador;
                 
                 // IGNORAR se não tem montador OU número inválido
-                if (!montador || isNaN(rota) || !rotaInput.value) {
+                if (!montador || isNaN(rota) || !campos.rota) {
                     return; // Pula este carro
                 }
                 
@@ -4308,12 +4327,11 @@ class RotaMontagemManager {
         // Se passou na validação, salvar
         let saved = 0;
         for (const v of aplicados) {
-            const rotaInput = document.getElementById(`rotaMont_${v.id}`);
-            const montSelect = document.getElementById(`montMont_${v.id}`);
+            const campos = valoresCampos.get(v.id);
             
-            if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
-                v.rotaMontagem = parseInt(rotaInput.value);
-                v.montador = montSelect.value;
+            if (campos && campos.rota && campos.montador) {
+                v.rotaMontagem = parseInt(campos.rota);
+                v.montador = campos.montador;
                 await saveBoth.vehicle(v);
                 
                 // Aguardar entre saves
@@ -4938,7 +4956,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.6-FINAL';
+    const VERSAO_ATUAL = 'v24.6.1-COMPLETE';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
