@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.2-FIX 🔧
-// NÃO recalcula se campo já tem valor! RESOLVE campo vazio! + delay 300ms!
+// Security Glass App - Main JavaScript v24.5.3-UPDATE 🔄
+// Botão ATUALIZAR APP! + Debug campo rota! + Delay 300ms!
 
-console.log('🔥 Security Glass v24.5.2-FIX!');
+console.log('🔥 Security Glass v24.5.3-UPDATE!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -588,6 +588,9 @@ class AuthSystem {
         const logoutBtn = document.getElementById('logoutBtn');
         logoutBtn.addEventListener('click', () => this.logout());
         
+        const forceUpdateBtn = document.getElementById('forceUpdateBtn');
+        forceUpdateBtn.addEventListener('click', () => this.forceUpdate());
+        
         const limparCacheLoginBtn = document.getElementById('limparCacheLoginBtn');
         limparCacheLoginBtn.addEventListener('click', () => this.limparCache());
         
@@ -744,6 +747,58 @@ class AuthSystem {
         document.getElementById('rememberMe').checked = false;
     }
     
+    static async forceUpdate() {
+        const confirma = confirm('🔄 ATUALIZAR APP PARA VERSÃO MAIS RECENTE?\n\nIsso vai:\n✅ Desregistrar Service Worker\n✅ Limpar TODOS os caches\n✅ Baixar versão nova do servidor\n✅ Recarregar página\n\nConfirma?');
+        
+        if (!confirma) return;
+        
+        try {
+            console.log('🔄 Forçando atualização...');
+            
+            // 1. Desregistrar Service Worker
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                    await registration.unregister();
+                    console.log('✅ Service Worker desregistrado');
+                }
+            }
+            
+            // 2. Limpar TODOS os caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    console.log(`✅ Cache ${cacheName} deletado`);
+                }
+            }
+            
+            // 3. Limpar localStorage (mantém credenciais)
+            const rememberMe = localStorage.getItem('rememberMe');
+            const savedUsername = localStorage.getItem('savedUsername');
+            const team = localStorage.getItem('team');
+            const config = localStorage.getItem('config');
+            
+            localStorage.clear();
+            
+            if (rememberMe) localStorage.setItem('rememberMe', rememberMe);
+            if (savedUsername) localStorage.setItem('savedUsername', savedUsername);
+            if (team) localStorage.setItem('team', team);
+            if (config) localStorage.setItem('config', config);
+            
+            console.log('✅ Atualização forçada concluída!');
+            
+            alert('✅ App atualizado!\n\nRecarregando versão mais recente...');
+            
+            // 4. Recarregar com bypass de cache
+            window.location.reload(true);
+            
+        } catch (error) {
+            console.error('❌ Erro ao forçar atualização:', error);
+            alert('❌ Erro: ' + error.message);
+        }
+    }
+
     static limparCache() {
         const confirma = confirm('🧹 LIMPAR CACHE E DADOS ANTIGOS?\n\nIsso vai:\n✅ Limpar dados locais antigos\n✅ Resolver problemas de carros "fantasmas"\n✅ Sincronizar corretamente com a nuvem\n\nA página será recarregada.\n\nConfirma?');
         
@@ -3674,6 +3729,10 @@ class RotaDesmontagemManager {
         // Sugerir próximo número
         inputRota.value = maiorNumero + 1;
         console.log(`✏️ AUTO-PREENCHIDO: Rota ${maiorNumero + 1} para carro ${vehicleId}`);
+        console.log(`   Campo ID: rotaDesm_${vehicleId}, valor agora: "${inputRota.value}"`);
+        
+        // Forçar atualização visual
+        inputRota.dispatchEvent(new Event('change', { bubbles: true }));
         
         console.log(`🔢 ${novoMontador}: rotas salvas ${rotasSalvas.join(', ')} + tela ${numerosUsados.filter(n => !rotasSalvas.includes(n)).join(', ')} → sugerindo ${maiorNumero + 1}`);
     }
@@ -4861,7 +4920,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.2-FIX';
+    const VERSAO_ATUAL = 'v24.5.3-UPDATE';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
