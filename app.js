@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.5-TRACE 🔍🔍
-// TRACE completo! Vamos pegar quem limpa o campo!
+// Security Glass App - Main JavaScript v24.6-FINAL 🎉
+// CAPTURA valores ANTES do loop! NÃO lê DOM durante save! RESOLVE!
 
-console.log('🔥 Security Glass v24.5.5-TRACE!');
+console.log('🔥 Security Glass v24.6-FINAL!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3746,15 +3746,26 @@ class RotaDesmontagemManager {
         const vehicles = DB.getVehicles();
         const cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         
+        // CRITICAL: Capturar TODOS os valores DOS CAMPOS AGORA!
+        // Antes de qualquer save que possa re-renderizar
+        const valoresCampos = new Map();
+        for (const v of cadastrados) {
+            const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
+            const montSelect = document.getElementById(`montDesm_${v.id}`);
+            valoresCampos.set(v.id, {
+                rota: rotaInput?.value || '',
+                montador: montSelect?.value || ''
+            });
+        }
+        
+        console.log(`📸 Valores capturados:`, Array.from(valoresCampos.entries()).map(([id, vals]) => `${id}: rota=${vals.rota}, mont=${vals.montador}`));
+        
         // VALIDAR: verificar números duplicados POR MONTADOR (cada um separado!)
         let temDuplicado = false;
         let mensagemErro = '';
         
         // Pegar lista de montadores únicos na tela
-        const montadoresNaTela = [...new Set(cadastrados.map(v => {
-            const montSelect = document.getElementById(`montDesm_${v.id}`);
-            return montSelect ? montSelect.value : null;
-        }).filter(Boolean))];
+        const montadoresNaTela = [...new Set(Array.from(valoresCampos.values()).map(v => v.montador).filter(Boolean))];
         
         // Validar CADA MONTADOR separadamente
         const hoje = new Date().toDateString();
@@ -3774,11 +3785,10 @@ class RotaDesmontagemManager {
             // 2. Buscar rotas NOVAS na tela desse montador
             const rotasNovas = [];
             for (const v of cadastrados) {
-                const montSelect = document.getElementById(`montDesm_${v.id}`);
-                const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
+                const campos = valoresCampos.get(v.id);
                 
-                if (montSelect && montSelect.value === montador && rotaInput && rotaInput.value) {
-                    const rota = parseInt(rotaInput.value);
+                if (campos && campos.montador === montador && campos.rota) {
+                    const rota = parseInt(campos.rota);
                     
                     // Verifica se conflita com rotas JÁ SALVAS
                     if (rotasExistentes.includes(rota)) {
@@ -3806,7 +3816,6 @@ class RotaDesmontagemManager {
             return;
         }
         
-        
         // Se passou na validação, salvar
         let saved = 0;
         const rotasPorMontador = {}; // Para contar carros por montador (notificações)
@@ -3816,17 +3825,14 @@ class RotaDesmontagemManager {
         for (const v of cadastrados) {
             console.log(`\n🔍 Processando ${v.modelo} (ID: ${v.id}):`);
             
-            const rotaInput = document.getElementById(`rotaDesm_${v.id}`);
-            const montSelect = document.getElementById(`montDesm_${v.id}`);
+            // Usar valores CAPTURADOS, não ler DOM!
+            const campos = valoresCampos.get(v.id);
             
-            console.log(`   rotaInput existe? ${!!rotaInput}`);
-            console.log(`   rotaInput.value = "${rotaInput?.value}"`);
-            console.log(`   montSelect existe? ${!!montSelect}`);
-            console.log(`   montSelect.value = "${montSelect?.value}"`);
+            console.log(`   Valores capturados: rota="${campos.rota}", montador="${campos.montador}"`);
             
-            if (rotaInput && rotaInput.value && montSelect && montSelect.value) {
-                v.rotaDesmontagem = parseInt(rotaInput.value);
-                v.montador = montSelect.value;
+            if (campos && campos.rota && campos.montador) {
+                v.rotaDesmontagem = parseInt(campos.rota);
+                v.montador = campos.montador;
                 
                 console.log(`💾 SALVANDO ${v.modelo}: Rota ${v.rotaDesmontagem}, Montador ${v.montador}`);
                 
@@ -4932,7 +4938,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.5-TRACE';
+    const VERSAO_ATUAL = 'v24.6-FINAL';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
