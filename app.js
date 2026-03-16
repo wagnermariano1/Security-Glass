@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.5.1-DEBUG 🔍
-// Debug de rotas múltiplas! Logs detalhados!
+// Security Glass App - Main JavaScript v24.5.1-DELAY 🔧
+// 300ms delay entre saves! Evita CORS/rate limit! RESOLVE!
 
-console.log('🔥 Security Glass v24.5.1-DEBUG!');
+console.log('🔥 Security Glass v24.5.1-DELAY!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3756,6 +3756,11 @@ class RotaDesmontagemManager {
                 // Salvar este veículo
                 await saveBoth.vehicle(v);
                 
+                // CRITICAL: Aguardar 300ms entre saves para evitar CORS/rate limit
+                if (saved > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
                 // Contar para notificação
                 if (!rotasPorMontador[v.montador]) {
                     rotasPorMontador[v.montador] = [];
@@ -3988,6 +3993,12 @@ class RotaAplicacaoManager {
                 v.sequenciaAplicacao = parseInt(seqInput.value);
                 v.aplicador = appSelect.value;
                 await saveBoth.vehicle(v);
+                
+                // Aguardar entre saves
+                if (saved > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
                 saved++;
             }
         }
@@ -4211,6 +4222,12 @@ class RotaMontagemManager {
                 v.rotaMontagem = parseInt(rotaInput.value);
                 v.montador = montSelect.value;
                 await saveBoth.vehicle(v);
+                
+                // Aguardar entre saves
+                if (saved > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
                 saved++;
             }
         }
@@ -4828,7 +4845,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.5.1-DEBUG';
+    const VERSAO_ATUAL = 'v24.5.1-DELAY';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
