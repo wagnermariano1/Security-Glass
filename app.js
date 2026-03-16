@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.6.1-COMPLETE 🎉🎉
-// TODAS as rotas corrigidas! Desmontagem + Aplicação + Montagem! COMPLETO!
+// Security Glass App - Main JavaScript v25.0-PRODUCTION 🎉🎉🎉
+// SISTEMA COMPLETO! Rotas múltiplas ✅ Dashboard ✅ Finalizados ordenados ✅
 
-console.log('🔥 Security Glass v24.6.1-COMPLETE!');
+console.log('🔥 Security Glass v25.0-PRODUCTION!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1452,30 +1452,10 @@ class Dashboard {
         let cadastrados = vehicles.filter(v => v.status === 'cadastrado');
         let desmontados = vehicles.filter(v => v.status === 'desmontado');
         let aplicados = vehicles.filter(v => v.status === 'aplicado');
-        
-        // Debug finalizados
-        const montados = vehicles.filter(v => v.status === 'montado');
-        console.log(`📊 Total montados: ${montados.length}`);
-        console.log('Montados:', montados.map(v => ({
-            modelo: v.modelo,
-            montagemData: v.montagemData,
-            isCurrentMonth: Utils.isCurrentMonth(v.montagemData)
-        })));
-        
         let finalizados = vehicles.filter(v => v.status === 'montado' && Utils.isCurrentMonth(v.montagemData));
-        console.log(`✅ Finalizados (mês atual): ${finalizados.length}`);
         
         // Filtros por permissão
         if (role === 'montador') {
-            console.log('=== DEBUG MONTADOR ===');
-            console.log('currentUserName:', currentUserName);
-            console.log('Cadastrados antes filtro:', cadastrados.map(v => ({
-                modelo: v.modelo,
-                montador: v.montador,
-                status: v.status,
-                prioridade: v.prioridade
-            })));
-            
             // Montador vê TODOS os seus carros cadastrados (com ou sem prioridade)
             cadastrados = cadastrados.filter(v => v.montador === currentUserName);
             
@@ -1488,8 +1468,6 @@ class Dashboard {
                 if (b.rotaDesmontagem) return 1;
                 return 0;
             });
-            
-            console.log('Cadastrados DEPOIS filtro:', cadastrados.map(v => v.modelo));
             
             aplicados = aplicados.filter(v => v.montador === currentUserName);
             
@@ -1507,20 +1485,11 @@ class Dashboard {
             });
             
             // FILTRAR FINALIZADOS: vê que ELE desmontou, aplicou OU montou
-            console.log('Finalizados ANTES filtro montador:', finalizados.map(v => ({
-                modelo: v.modelo,
-                montadoPor: v.montadoPor,
-                desmontadoPor: v.desmontadoPor,
-                aplicadoPor: v.aplicadoPor
-            })));
-            
             finalizados = finalizados.filter(v => 
                 v.desmontadoPor === currentUserName || 
                 v.aplicadoPor === currentUserName ||
                 v.montadoPor === currentUserName
             );
-            
-            console.log('Finalizados DEPOIS filtro montador:', finalizados.map(v => v.modelo));
             
             // Não vê desmontados (são para aplicadores)
             desmontados = [];
@@ -1588,6 +1557,13 @@ class Dashboard {
         document.getElementById('countDesmontado').textContent = desmontados.length;
         document.getElementById('countAplicado').textContent = aplicados.length;
         document.getElementById('countFinalizado').textContent = finalizados.length;
+        
+        // Ordenar finalizados: MAIS RECENTES PRIMEIRO
+        finalizados.sort((a, b) => {
+            const dateA = new Date(a.montagemData || 0);
+            const dateB = new Date(b.montagemData || 0);
+            return dateB - dateA; // Decrescente (mais novo primeiro)
+        });
         
         this.renderColumn('columnCadastrado', cadastrados);
         this.renderColumn('columnDesmontado', desmontados);
@@ -1715,7 +1691,17 @@ class Dashboard {
         
         // Montador
         if (role === 'montador') {
-            // Só vê seus carros
+            // Para finalizados: vê se PARTICIPOU (não precisa ser montador final)
+            if (vehicle.status === 'montado') {
+                const participou = vehicle.desmontadoPor === currentUserName || 
+                                  vehicle.aplicadoPor === currentUserName ||
+                                  vehicle.montadoPor === currentUserName;
+                if (!participou) return '';
+                // Finalizado: sem botões, só visualizar
+                return '';
+            }
+            
+            // Para outros status: só vê seus carros
             if (vehicle.montador !== currentUserName) return '';
             
             if (vehicle.status === 'cadastrado') {
@@ -3778,8 +3764,6 @@ class RotaDesmontagemManager {
             });
         }
         
-        console.log(`📸 Valores capturados:`, Array.from(valoresCampos.entries()).map(([id, vals]) => `${id}: rota=${vals.rota}, mont=${vals.montador}`));
-        
         // VALIDAR: verificar números duplicados POR MONTADOR (cada um separado!)
         let temDuplicado = false;
         let mensagemErro = '';
@@ -3840,21 +3824,13 @@ class RotaDesmontagemManager {
         let saved = 0;
         const rotasPorMontador = {}; // Para contar carros por montador (notificações)
         
-        console.log(`🔎 INICIANDO SAVE - Total cadastrados: ${cadastrados.length}`);
-        
         for (const v of cadastrados) {
-            console.log(`\n🔍 Processando ${v.modelo} (ID: ${v.id}):`);
-            
             // Usar valores CAPTURADOS, não ler DOM!
             const campos = valoresCampos.get(v.id);
-            
-            console.log(`   Valores capturados: rota="${campos.rota}", montador="${campos.montador}"`);
             
             if (campos && campos.rota && campos.montador) {
                 v.rotaDesmontagem = parseInt(campos.rota);
                 v.montador = campos.montador;
-                
-                console.log(`💾 SALVANDO ${v.modelo}: Rota ${v.rotaDesmontagem}, Montador ${v.montador}`);
                 
                 // Salvar este veículo
                 await saveBoth.vehicle(v);
@@ -3871,8 +3847,6 @@ class RotaDesmontagemManager {
                 rotasPorMontador[v.montador].push(v);
                 
                 saved++;
-            } else {
-                console.log(`⏭️ PULANDO ${v.modelo}: Rota ou montador vazio`);
             }
         }
         
@@ -4976,7 +4950,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.6.3-DEBUG2';
+    const VERSAO_ATUAL = 'v24.7-FINAL';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
