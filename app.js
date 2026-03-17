@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.8-FILTROS 📊
-// Filtros na Aba Veículos! Status, Período, Pessoa! Contador!
+// Security Glass App - Main JavaScript v24.9-NOTIF 🔔
+// Notifica Vinicius quando cadastrar novo carro! Filtros! Tudo!
 
-console.log('🔥 Security Glass v24.8-FILTROS!');
+console.log('🔥 Security Glass v24.9-NOTIF!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -2292,6 +2292,14 @@ class VehicleForm {
             Dashboard.renderDashboard();
         }
         Dashboard.loadDataLists();
+        
+        // NOVO: Notificar Vinicius M sobre novo cadastro
+        const cadastradoPor = APP_STATE.currentUserFullName;
+        PushNotifications.sendNotification(
+            ['vinicius'], // Vinicius M
+            '📝 Novo veículo cadastrado',
+            `${modelo} - ${chassi}${cadastradoPor !== 'Wagner' && cadastradoPor !== 'Vinicius M' ? ` (por ${cadastradoPor})` : ''}`
+        );
         
         alert('Veículo cadastrado com sucesso!');
     }
@@ -5011,7 +5019,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.8-FILTROS';
+    const VERSAO_ATUAL = 'v24.9-NOTIF';
     const ultimaVersao = localStorage.getItem('appVersion');
     
     if (ultimaVersao !== VERSAO_ATUAL) {
