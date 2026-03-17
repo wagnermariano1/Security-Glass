@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v24.9-NOTIF 🔔
-// Notifica Vinicius quando cadastrar novo carro! Filtros! Tudo!
+// Security Glass App - Main JavaScript v25.0-TRAVA 🔒
+// TRAVA DE VERSÃO! Versão antiga não pode logar! Evita conflitos!
 
-console.log('🔥 Security Glass v24.9-NOTIF!');
+console.log('🔥 Security Glass v25.0-TRAVA!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -5019,8 +5019,63 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v24.9-NOTIF';
+    const VERSAO_ATUAL = 'v25.0-TRAVA';
+    const VERSAO_MINIMA_PERMITIDA = 24.7; // Versão mínima para funcionar
     const ultimaVersao = localStorage.getItem('appVersion');
+    
+    // VERIFICAR SE VERSÃO É MUITO ANTIGA
+    const versaoNumero = parseFloat(VERSAO_ATUAL.match(/v(\d+\.\d+)/)[1]);
+    if (versaoNumero < VERSAO_MINIMA_PERMITIDA) {
+        console.error(`❌ Versão ${VERSAO_ATUAL} está desatualizada! Mínima: v${VERSAO_MINIMA_PERMITIDA}`);
+        
+        // Bloquear login
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) {
+            // Criar aviso
+            const aviso = document.createElement('div');
+            aviso.style.cssText = 'margin-bottom: 20px;';
+            aviso.innerHTML = `
+                <div style="background: #fee2e2; border: 3px solid #dc2626; padding: 24px; border-radius: 12px; text-align: center;">
+                    <h2 style="color: #dc2626; margin: 0 0 16px 0; font-size: 1.5rem;">⚠️ Versão Desatualizada!</h2>
+                    <p style="margin: 0 0 12px 0; font-size: 1.1rem; line-height: 1.6;">
+                        Sua versão (<strong>${VERSAO_ATUAL}</strong>) está desatualizada e <strong style="color: #dc2626;">pode causar perda de dados</strong>!
+                    </p>
+                    <p style="margin: 0 0 20px 0; font-size: 1rem; color: #64748b; line-height: 1.6;">
+                        <strong>Por favor, NÃO faça login até atualizar!</strong><br>
+                        Clique no botão abaixo ou pressione <strong>CTRL + SHIFT + R</strong>
+                    </p>
+                    <button onclick="location.reload(true)" style="background: #22c55e; color: white; border: none; padding: 16px 40px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        🔄 Atualizar Agora
+                    </button>
+                </div>
+            `;
+            
+            // Inserir aviso no topo
+            loginScreen.insertBefore(aviso, loginScreen.firstChild);
+            
+            // DESABILITAR formulário de login
+            const loginForm = document.querySelector('#loginScreen form');
+            if (loginForm) {
+                loginForm.style.opacity = '0.4';
+                loginForm.style.pointerEvents = 'none';
+            }
+            
+            // DESABILITAR todos os campos e botão
+            document.querySelectorAll('#loginScreen input, #loginScreen select, #loginScreen button[type="submit"]').forEach(campo => {
+                campo.disabled = true;
+            });
+            
+            // MUDAR texto do botão
+            const loginBtn = document.querySelector('#loginScreen button[type="submit"]');
+            if (loginBtn) {
+                loginBtn.textContent = '❌ Atualize antes de logar';
+                loginBtn.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // Impedir inicialização do Firebase
+        return;
+    }
     
     if (ultimaVersao !== VERSAO_ATUAL) {
         console.log(`🔄 Nova versão detectada: ${ultimaVersao || 'primeira vez'} → ${VERSAO_ATUAL}`);
