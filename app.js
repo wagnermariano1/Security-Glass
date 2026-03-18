@@ -5020,7 +5020,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     // Verificar versão e limpar cache se necessário
     const VERSAO_ATUAL = 'v25.1-TRAVA-FIX';
-    const VERSAO_MINIMA_PERMITIDA = 24.7; // Versão mínima para funcionar
+    const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
     // VERIFICAR SE VERSÃO ANTIGA NO CACHE É MUITO ANTIGA
