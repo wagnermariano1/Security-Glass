@@ -5023,6 +5023,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
+    // ATUALIZAR DISPLAY DA VERSÃO NA TELA DE LOGIN
+    const versionDisplay = document.getElementById('appVersionDisplay');
+    if (versionDisplay) {
+        versionDisplay.textContent = VERSAO_ATUAL;
+    }
+    
     // VERIFICAR SE VERSÃO ANTIGA NO CACHE É MUITO ANTIGA
     if (ultimaVersao && ultimaVersao !== VERSAO_ATUAL) {
         const versaoAntigaNumero = parseFloat(ultimaVersao.match(/v(\d+\.\d+)/)?.[1] || '0');
