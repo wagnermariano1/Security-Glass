@@ -741,7 +741,23 @@ class AuthSystem {
         
         document.getElementById('dashboardScreen').classList.remove('active');
         document.getElementById('loginScreen').classList.add('active');
-        document.body.classList.remove('gestor', 'manager', 'aplicador', 'montador');
+        document.body.classList.remove('gestor', 'manager', 'aplicador', 'montador', 'vendedora');
+        
+        // LIMPAR TODAS as tabs (remover active e resetar display)
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+            content.style.display = ''; // Reset para padrão CSS
+        });
+        
+        // RESETAR visibilidade de todas as tabs especiais
+        document.querySelectorAll('.manager-only, .gestor-only, .vendedora-only').forEach(el => {
+            el.style.display = ''; // Reset para padrão CSS
+            el.classList.remove('active');
+        });
         
         document.getElementById('passwordInput').value = '';
         document.getElementById('rememberMe').checked = false;
