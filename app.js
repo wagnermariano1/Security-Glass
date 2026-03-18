@@ -1670,7 +1670,7 @@ class Dashboard {
                 ${obsToShow}
                 ${vehicle.aplicador ? `<p><strong>Aplicador:</strong> ${vehicle.aplicador}</p>` : ''}
                 ${vehicle.montador ? `<p><strong>Montador:</strong> ${vehicle.montador}</p>` : ''}
-                ${vehicle.fotoOS ? `<p style="cursor: pointer; color: #3b82f6; font-weight: 600;" onclick="event.stopPropagation(); Dashboard.showFotoOS('${vehicle.id}')">📸 Foto OS (clique para ver)</p>` : ''}
+                ${vehicle.fotoOS ? `<p style="cursor: pointer; color: #2563eb; font-weight: 700; text-decoration: underline; margin: 8px 0;" onclick="event.stopPropagation(); Dashboard.showFotoOS('${vehicle.id}')">📸 Ver Foto OS</p>` : ''}
                 ${vehicle.cadastroData ? `<p><small>Cadastrado: ${Utils.formatDate(vehicle.cadastroData)}</small></p>` : ''}
                 ${vehicle.desmontagemData ? `<p><small>Desmontado: ${Utils.formatDate(vehicle.desmontagemData)}${vehicle.desmontadoPor ? ` - por ${vehicle.desmontadoPor}` : ''}</small></p>` : ''}
                 ${vehicle.aplicacaoData ? `<p><small>Aplicado: ${Utils.formatDateTime(vehicle.aplicacaoData)}${vehicle.aplicadoPor ? ` - por ${vehicle.aplicadoPor}` : ''}</small></p>` : ''}
@@ -1770,11 +1770,12 @@ class Dashboard {
         
         // Criar modal com foto
         const modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px;';
+        modal.id = 'modalFotoOS';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; cursor: pointer;';
         modal.innerHTML = `
-            <div style="max-width: 90%; max-height: 90%; position: relative;">
+            <div style="max-width: 90%; max-height: 90%; position: relative;" onclick="event.stopPropagation()">
                 <div style="text-align: right; margin-bottom: 10px;">
-                    <button onclick="this.closest('div').parentElement.remove()" style="background: white; border: none; color: #dc2626; font-size: 2rem; cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: bold;">×</button>
+                    <button style="background: white; border: none; color: #dc2626; font-size: 2rem; cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">×</button>
                 </div>
                 <img src="${vehicle.fotoOS}" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" alt="Foto OS">
                 <p style="color: white; text-align: center; margin-top: 12px; font-size: 1rem;">
@@ -1783,12 +1784,28 @@ class Dashboard {
             </div>
         `;
         
-        // Fechar ao clicar fora
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+        // Função para fechar modal
+        const fecharModal = () => {
+            if (modal && modal.parentNode) {
                 modal.remove();
             }
-        });
+        };
+        
+        // Fechar ao clicar no botão X
+        const btnFechar = modal.querySelector('button');
+        btnFechar.onclick = fecharModal;
+        
+        // Fechar ao clicar no fundo preto
+        modal.onclick = fecharModal;
+        
+        // Fechar com ESC
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                fecharModal();
+                document.removeEventListener('keydown', handleEsc);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
         
         document.body.appendChild(modal);
     }
