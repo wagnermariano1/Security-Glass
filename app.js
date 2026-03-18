@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.1-TRAVA-FIX 🔒
-// TRAVA CORRIGIDA! Agora checa versão do CACHE, não do código!
+// Security Glass App - Main JavaScript v25.2-FOTO-OS 📸
+// FOTO OS salva no cadastro! Comprimida 70%! Modal para visualizar!
 
-console.log('🔥 Security Glass v25.1-TRAVA-FIX!');
+console.log('🔥 Security Glass v25.2-FOTO-OS!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -1670,6 +1670,7 @@ class Dashboard {
                 ${obsToShow}
                 ${vehicle.aplicador ? `<p><strong>Aplicador:</strong> ${vehicle.aplicador}</p>` : ''}
                 ${vehicle.montador ? `<p><strong>Montador:</strong> ${vehicle.montador}</p>` : ''}
+                ${vehicle.fotoOS ? `<p style="cursor: pointer; color: #3b82f6; font-weight: 600;" onclick="event.stopPropagation(); Dashboard.showFotoOS('${vehicle.id}')">📸 Foto OS (clique para ver)</p>` : ''}
                 ${vehicle.cadastroData ? `<p><small>Cadastrado: ${Utils.formatDate(vehicle.cadastroData)}</small></p>` : ''}
                 ${vehicle.desmontagemData ? `<p><small>Desmontado: ${Utils.formatDate(vehicle.desmontagemData)}${vehicle.desmontadoPor ? ` - por ${vehicle.desmontadoPor}` : ''}</small></p>` : ''}
                 ${vehicle.aplicacaoData ? `<p><small>Aplicado: ${Utils.formatDateTime(vehicle.aplicacaoData)}${vehicle.aplicadoPor ? ` - por ${vehicle.aplicadoPor}` : ''}</small></p>` : ''}
@@ -1756,6 +1757,40 @@ class Dashboard {
     static markAsMontado(vehicleId) {
         console.log('markAsMontado chamado para veículo:', vehicleId);
         UpdateStatusModal.show(vehicleId, 'montado');
+    }
+    
+    static showFotoOS(vehicleId) {
+        const vehicles = DB.getVehicles();
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        
+        if (!vehicle || !vehicle.fotoOS) {
+            alert('Foto OS não encontrada!');
+            return;
+        }
+        
+        // Criar modal com foto
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px;';
+        modal.innerHTML = `
+            <div style="max-width: 90%; max-height: 90%; position: relative;">
+                <div style="text-align: right; margin-bottom: 10px;">
+                    <button onclick="this.closest('div').parentElement.remove()" style="background: white; border: none; color: #dc2626; font-size: 2rem; cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: bold;">×</button>
+                </div>
+                <img src="${vehicle.fotoOS}" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" alt="Foto OS">
+                <p style="color: white; text-align: center; margin-top: 12px; font-size: 1rem;">
+                    📸 Foto OS - ${vehicle.modelo} (${vehicle.chassi})
+                </p>
+            </div>
+        `;
+        
+        // Fechar ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        document.body.appendChild(modal);
     }
     
     static colocarEmEsperaAplicacao(vehicleId) {
@@ -2232,6 +2267,52 @@ class VehicleForm {
         
         console.log('📝 Dados:', {modelo, chassi, concessionaria});
         
+        // CAPTURAR E COMPRIMIR FOTO OS (se existir)
+        let fotoOS = null;
+        const photoPreview = document.getElementById('photoPreview');
+        const photoImg = photoPreview?.querySelector('img');
+        
+        if (photoImg && photoImg.src) {
+            try {
+                // Comprimir foto para 70% qualidade (igual montagem)
+                const img = new Image();
+                img.src = photoImg.src;
+                
+                await new Promise((resolve) => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Redimensionar mantendo proporção (max 1200px)
+                        let width = img.width;
+                        let height = img.height;
+                        const maxSize = 1200;
+                        
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = (height / width) * maxSize;
+                                width = maxSize;
+                            } else {
+                                width = (width / height) * maxSize;
+                                height = maxSize;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Comprimir JPEG 70%
+                        fotoOS = canvas.toDataURL('image/jpeg', 0.7);
+                        console.log('📸 Foto OS comprimida:', (fotoOS.length / 1024).toFixed(2) + ' KB');
+                        resolve();
+                    };
+                });
+            } catch (error) {
+                console.error('❌ Erro ao comprimir foto OS:', error);
+            }
+        }
+        
         const vehicles = DB.getVehicles();
         const newVehicle = {
             id: Utils.generateId(),
@@ -2240,14 +2321,15 @@ class VehicleForm {
             chassi,
             modelo,
             observacoes,
-            prioridade: prioridade ? parseInt(prioridade) : null, // Converter para número ou null
+            prioridade: prioridade ? parseInt(prioridade) : null,
             obsUrgencia,
             aplicador,
             montador,
             status: 'cadastrado',
             cadastradoPor: APP_STATE.currentUserFullName,
-            cadastradoPorPerfil: APP_STATE.currentRole, // NOVO
-            cadastroData: new Date().toISOString()
+            cadastradoPorPerfil: APP_STATE.currentRole,
+            cadastroData: new Date().toISOString(),
+            fotoOS: fotoOS // NOVA: foto OS comprimida
         };
         
         console.log('🚗 Novo veículo:', newVehicle);
@@ -5019,7 +5101,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.1-TRAVA-FIX';
+    const VERSAO_ATUAL = 'v25.2-FOTO-OS';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
