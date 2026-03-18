@@ -848,6 +848,34 @@ class AuthSystem {
             document.body.classList.add(APP_STATE.currentRole);
         }
         
+        // ESCONDER TUDO que não é para este perfil IMEDIATAMENTE
+        // Isso evita que apareça por 1 frame antes de esconder
+        if (APP_STATE.currentRole === 'vendedora') {
+            // Vendedora: esconder TUDO exceto tabs vendedora
+            document.querySelectorAll('.manager-only, .gestor-only').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('active');
+            });
+        } else if (APP_STATE.currentRole === 'montador' || APP_STATE.currentRole === 'aplicador') {
+            // Montador/Aplicador: esconder tabs vendedora e tabs gestor
+            document.querySelectorAll('.vendedora-only, .gestor-only').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('active');
+            });
+        } else if (APP_STATE.currentRole === 'manager') {
+            // Manager: esconder só tabs vendedora e gestor
+            document.querySelectorAll('.vendedora-only, .gestor-only').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('active');
+            });
+        } else if (APP_STATE.currentRole === 'gestor') {
+            // Gestor: esconder só tabs vendedora
+            document.querySelectorAll('.vendedora-only').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('active');
+            });
+        }
+        
         // NOVO: Controlar visibilidade por perfil
         if (APP_STATE.currentRole === 'vendedora') {
             // Desativar TODAS tabs normais
