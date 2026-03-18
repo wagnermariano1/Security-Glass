@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.2-FOTO-OS 📸
-// FOTO OS salva no cadastro! Comprimida 70%! Modal para visualizar!
+// Security Glass App - Main JavaScript v25.3 ⚡
+// Sistema completo e estável para produção!
 
-console.log('🔥 Security Glass v25.2-FOTO-OS!');
+console.log('🔥 Security Glass v25.3!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -839,6 +839,9 @@ class AuthSystem {
         document.getElementById('dashboardScreen').classList.add('active');
         
         document.getElementById('userNameDisplay').textContent = APP_STATE.currentUserFullName;
+        
+        // LIMPAR TODAS as classes de role antigas ANTES de adicionar nova
+        document.body.classList.remove('gestor', 'manager', 'aplicador', 'montador', 'vendedora');
         
         // Adicionar role ao body (proteção contra vazio)
         if (APP_STATE.currentRole) {
@@ -5118,7 +5121,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.2-FOTO-OS';
+    const VERSAO_ATUAL = 'v25.3';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
