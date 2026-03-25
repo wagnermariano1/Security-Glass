@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.4 🔄
-// RETRY automático em caso de Firebase sobrecarregado!
+// Security Glass App - Main JavaScript v25.5 ⚡
+// FIX CRÍTICO: Delete não salva lista inteira (153 carros)! Só deleta documento específico!
 
-console.log('🔥 Security Glass v25.4!');
+console.log('🔥 Security Glass v25.5!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -420,22 +420,23 @@ const saveBoth = {
     deleteVehicle: async (vehicleId) => {
         console.log('🔵 saveBoth.deleteVehicle iniciado para:', vehicleId);
         
-        // Buscar lista ATUAL do Firebase
+        // 1. DELETAR do Firebase PRIMEIRO (fonte da verdade)
+        if (window.firebase && FirebaseDB.initialized) {
+            console.log('🔥 Deletando documento Firebase...');
+            try {
+                await FirebaseDB.deleteVehicle(vehicleId);
+                console.log('✅ Documento Firebase deletado!');
+            } catch (error) {
+                console.error('❌ Erro ao deletar Firebase:', error);
+                // Se falhar, continua pra atualizar cache local pelo menos
+            }
+        } else {
+            console.warn('⚠️ Firebase não disponível');
+        }
+        
+        // 2. ATUALIZAR cache local (sem salvar no Firebase de novo!)
         let vehicles = DB.getVehicles();
         console.log('📊 Veículos no cache ANTES:', vehicles.length);
-        
-        if (window.firebase && FirebaseDB.initialized) {
-            try {
-                console.log('🔄 Buscando lista atualizada do Firebase...');
-                const vehiclesFirebase = await FirebaseDB.getVehicles();
-                if (vehiclesFirebase && vehiclesFirebase.length > 0) {
-                    vehicles = vehiclesFirebase;
-                    console.log('✅ Lista Firebase carregada:', vehiclesFirebase.length, 'veículos');
-                }
-            } catch (error) {
-                console.warn('⚠️ Erro ao buscar Firebase:', error);
-            }
-        }
         
         const vehicleBefore = vehicles.find(v => v.id === vehicleId);
         console.log('🎯 Veículo a deletar:', vehicleBefore ? vehicleBefore.modelo : 'NÃO ENCONTRADO');
@@ -443,19 +444,13 @@ const saveBoth = {
         vehicles = vehicles.filter(v => v.id !== vehicleId);
         console.log('📊 Veículos APÓS filtrar:', vehicles.length);
         
-        // DB.saveVehicles já sincroniza com Firebase
-        console.log('💾 Salvando lista sem o veículo...');
-        await DB.saveVehicles(vehicles);
-        console.log('✅ Lista salva!');
-        
-        // Deletar também do Firebase (específico)
-        if (window.firebase && FirebaseDB.initialized) {
-            console.log('🔥 Deletando documento específico no Firebase...');
-            await FirebaseDB.deleteVehicle(vehicleId);
-            console.log('✅ Documento Firebase deletado!');
-        } else {
-            console.warn('⚠️ Firebase não disponível, só deletou do cache');
+        // 3. ATUALIZAR só localStorage e memória (NÃO Firebase!)
+        try {
+            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        } catch (e) {
+            console.log('📦 localStorage cheio, só memória');
         }
+        window.VEHICLES_CACHE = vehicles;
         
         console.log('✅ saveBoth.deleteVehicle COMPLETO!');
     }
@@ -5246,7 +5241,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.4';
+    const VERSAO_ATUAL = 'v25.5';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
