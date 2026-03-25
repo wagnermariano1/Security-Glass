@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.3 ⚡
-// Sistema completo e estável para produção!
+// Security Glass App - Main JavaScript v25.4 🔄
+// RETRY automático em caso de Firebase sobrecarregado!
 
-console.log('🔥 Security Glass v25.3!');
+console.log('🔥 Security Glass v25.4!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -124,27 +124,73 @@ const FirebaseDB = {
             return DB.saveVehicles([...DB.getVehicles().filter(v => v.id !== vehicle.id), vehicle]);
         }
         
-        try {
-            const { db, doc, setDoc } = window.firebase;
-            await setDoc(doc(db, 'vehicles', vehicle.id), vehicle);
-        } catch (error) {
-            console.error('Erro ao salvar veículo:', error);
-            // Fallback para localStorage
-            DB.saveVehicles([...DB.getVehicles().filter(v => v.id !== vehicle.id), vehicle]);
+        // RETRY até 3 vezes em caso de resource-exhausted
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                const { db, doc, setDoc } = window.firebase;
+                await setDoc(doc(db, 'vehicles', vehicle.id), vehicle);
+                return; // Sucesso!
+                
+            } catch (error) {
+                attempts++;
+                
+                // Se é resource-exhausted, espera e tenta de novo
+                if (error.code === 'resource-exhausted' && attempts < maxAttempts) {
+                    const waitTime = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s
+                    console.warn(`⏳ Firebase sobrecarregado! Aguardando ${waitTime/1000}s... (tentativa ${attempts}/${maxAttempts})`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue;
+                }
+                
+                // Falhou ou é outro erro
+                console.error('❌ Erro ao salvar veículo após', attempts, 'tentativas:', error);
+                DB.saveVehicles([...DB.getVehicles().filter(v => v.id !== vehicle.id), vehicle]);
+                throw error;
+            }
         }
     },
     
     async deleteVehicle(vehicleId) {
+        console.log('🔴 FirebaseDB.deleteVehicle chamado para:', vehicleId);
+        
         if (!this.initialized || !window.firebase) {
+            console.warn('⚠️ Firebase não inicializado, deletando só do cache');
             return DB.saveVehicles(DB.getVehicles().filter(v => v.id !== vehicleId));
         }
         
-        try {
-            const { db, doc, deleteDoc } = window.firebase;
-            await deleteDoc(doc(db, 'vehicles', vehicleId));
-        } catch (error) {
-            console.error('Erro ao deletar veículo:', error);
-            DB.saveVehicles(DB.getVehicles().filter(v => v.id !== vehicleId));
+        // RETRY até 3 vezes em caso de resource-exhausted
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                const { db, doc, deleteDoc } = window.firebase;
+                console.log(`🔥 Tentativa ${attempts + 1}/${maxAttempts} - Deletando documento Firebase:`, vehicleId);
+                
+                await deleteDoc(doc(db, 'vehicles', vehicleId));
+                console.log('✅ Documento Firebase DELETADO com sucesso!');
+                return; // Sucesso! Sai da função
+                
+            } catch (error) {
+                attempts++;
+                console.error(`❌ Erro na tentativa ${attempts}:`, error.code, error.message);
+                
+                // Se é resource-exhausted, espera e tenta de novo
+                if (error.code === 'resource-exhausted' && attempts < maxAttempts) {
+                    const waitTime = Math.pow(2, attempts) * 1000; // Backoff exponencial: 2s, 4s, 8s
+                    console.warn(`⏳ Firebase sobrecarregado! Aguardando ${waitTime/1000}s antes de tentar novamente...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue; // Tenta de novo
+                }
+                
+                // Se não conseguiu após 3 tentativas ou é outro erro
+                console.error('❌ Falhou após', attempts, 'tentativas. Deletando do cache local.');
+                DB.saveVehicles(DB.getVehicles().filter(v => v.id !== vehicleId));
+                throw error;
+            }
         }
     },
     
@@ -372,30 +418,46 @@ const saveBoth = {
         }
     },
     deleteVehicle: async (vehicleId) => {
+        console.log('🔵 saveBoth.deleteVehicle iniciado para:', vehicleId);
+        
         // Buscar lista ATUAL do Firebase
         let vehicles = DB.getVehicles();
+        console.log('📊 Veículos no cache ANTES:', vehicles.length);
         
         if (window.firebase && FirebaseDB.initialized) {
             try {
+                console.log('🔄 Buscando lista atualizada do Firebase...');
                 const vehiclesFirebase = await FirebaseDB.getVehicles();
                 if (vehiclesFirebase && vehiclesFirebase.length > 0) {
                     vehicles = vehiclesFirebase;
+                    console.log('✅ Lista Firebase carregada:', vehiclesFirebase.length, 'veículos');
                 }
             } catch (error) {
                 console.warn('⚠️ Erro ao buscar Firebase:', error);
             }
         }
         
+        const vehicleBefore = vehicles.find(v => v.id === vehicleId);
+        console.log('🎯 Veículo a deletar:', vehicleBefore ? vehicleBefore.modelo : 'NÃO ENCONTRADO');
+        
         vehicles = vehicles.filter(v => v.id !== vehicleId);
+        console.log('📊 Veículos APÓS filtrar:', vehicles.length);
         
         // DB.saveVehicles já sincroniza com Firebase
-        // Batch vai salvar sem o veículo deletado
+        console.log('💾 Salvando lista sem o veículo...');
         await DB.saveVehicles(vehicles);
+        console.log('✅ Lista salva!');
         
         // Deletar também do Firebase (específico)
         if (window.firebase && FirebaseDB.initialized) {
+            console.log('🔥 Deletando documento específico no Firebase...');
             await FirebaseDB.deleteVehicle(vehicleId);
+            console.log('✅ Documento Firebase deletado!');
+        } else {
+            console.warn('⚠️ Firebase não disponível, só deletou do cache');
         }
+        
+        console.log('✅ saveBoth.deleteVehicle COMPLETO!');
     }
 };
 
@@ -2931,26 +2993,45 @@ class VehicleDetailModal {
     }
     
     static async deleteVehicle(vehicleId) {
+        console.log('🗑️ deleteVehicle chamado para:', vehicleId);
+        
         const vehicles = DB.getVehicles();
         const vehicle = vehicles.find(v => v.id === vehicleId);
         
         if (!vehicle) {
+            console.error('❌ Veículo não encontrado no cache:', vehicleId);
             alert('Veículo não encontrado!');
             return;
         }
         
+        console.log('📋 Veículo encontrado:', vehicle.modelo, vehicle.chassi);
+        
         const confirmMsg = `Tem certeza que deseja EXCLUIR o veículo?\n\n${vehicle.modelo}\nChassi: ${vehicle.chassi}\n\nEsta ação NÃO pode ser desfeita!`;
         
-        if (confirm(confirmMsg)) {
-            // Remover veículo
-            await saveBoth.deleteVehicle(vehicleId);
+        console.log('❓ Mostrando confirmação...');
+        const confirmed = confirm(confirmMsg);
+        console.log('✅ Usuário confirmou?', confirmed);
+        
+        if (confirmed) {
+            console.log('🔥 Iniciando exclusão...');
             
-            // Fechar modal e atualizar
-            document.getElementById('vehicleDetailModal').classList.remove('active');
-            Dashboard.renderDashboard();
-            VehiclesManager.loadVehiclesList();
-            
-            alert('✅ Veículo excluído com sucesso!');
+            try {
+                // Remover veículo
+                await saveBoth.deleteVehicle(vehicleId);
+                console.log('✅ saveBoth.deleteVehicle completou!');
+                
+                // Fechar modal e atualizar
+                document.getElementById('vehicleDetailModal').classList.remove('active');
+                Dashboard.renderDashboard();
+                VehiclesManager.loadVehiclesList();
+                
+                alert('✅ Veículo excluído com sucesso!');
+            } catch (error) {
+                console.error('❌ Erro ao excluir:', error);
+                alert('❌ Erro ao excluir veículo: ' + error.message);
+            }
+        } else {
+            console.log('❌ Usuário cancelou exclusão');
         }
     }
     
@@ -5165,7 +5246,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.3';
+    const VERSAO_ATUAL = 'v25.4';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
