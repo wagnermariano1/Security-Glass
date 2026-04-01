@@ -1,7 +1,73 @@
 // Security Glass App - Main JavaScript v25.8 🏢
 // MULTI-LOCAL para vendedoras! 1 cadastro, múltiplas lojas!
+// AUTO-UPDATE forçado via Service Worker!
 
 console.log('🔥 Security Glass v25.8!');
+
+// ========================================
+// LISTENER RELOAD AUTOMÁTICO (Service Worker)
+// ========================================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('📨 Mensagem do Service Worker:', event.data);
+        
+        if (event.data && event.data.type === 'FORCE_RELOAD') {
+            console.log(`🔄 Nova versão detectada: ${event.data.version}`);
+            console.log('⚡ Recarregando aplicação em 2 segundos...');
+            
+            // Mostrar aviso visual
+            const aviso = document.createElement('div');
+            aviso.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px 40px;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                z-index: 99999;
+                text-align: center;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                animation: pulse 1s ease-in-out infinite;
+            `;
+            aviso.innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔄</div>
+                <h2 style="margin: 0 0 10px 0; font-size: 1.5rem;">Nova Versão!</h2>
+                <p style="margin: 0; font-size: 1rem; opacity: 0.9;">${event.data.message || 'Atualizando sistema...'}</p>
+            `;
+            document.body.appendChild(aviso);
+            
+            // Adicionar animação pulse
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+                    50% { transform: translate(-50%, -50%) scale(1.05); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Recarregar após 2 segundos
+            setTimeout(() => {
+                console.log('⚡ RECARREGANDO AGORA!');
+                window.location.reload(true); // Hard reload
+            }, 2000);
+        }
+    });
+    
+    // Checar por atualizações a cada 30 segundos
+    setInterval(() => {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) {
+                console.log('🔍 Checando atualizações...');
+                reg.update();
+            }
+        });
+    }, 30000); // 30 segundos
+}
+
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -5392,7 +5458,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.8';
+    const VERSAO_ATUAL = 'v25.8-auto';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     

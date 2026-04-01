@@ -1,4 +1,5 @@
-const CACHE_NAME = 'security-glass-v4';
+const CACHE_NAME = 'security-glass-v25.8'; // ← MUDOU!
+const APP_VERSION = 'v25.8'; // ← NOVO!
 const urlsToCache = [
   '/',
   '/index.html',
@@ -64,29 +65,57 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-// Instalação do Service Worker
+// Instalação do Service Worker - FORÇAR ATIVAÇÃO IMEDIATA
 self.addEventListener('install', event => {
+  console.log('🔄 Instalando nova versão:', APP_VERSION);
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache aberto');
+        console.log('✅ Cache aberto:', CACHE_NAME);
         return cache.addAll(urlsToCache);
+      })
+      .then(() => {
+        console.log('⚡ Pulando espera - ativando imediatamente!');
+        return self.skipWaiting(); // ← FORÇAR ATIVAÇÃO IMEDIATA!
       })
   );
 });
 
-// Ativação do Service Worker
+// Ativação do Service Worker - FORÇAR RELOAD DAS PÁGINAS
 self.addEventListener('activate', event => {
+  console.log('🔄 Ativando nova versão:', APP_VERSION);
+  
   event.waitUntil(
+    // 1. Limpar caches antigos
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cacheName);
+            console.log('🗑️ Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    })
+    .then(() => {
+      console.log('✅ Assumindo controle de todas as páginas');
+      return self.clients.claim(); // ← ASSUMIR CONTROLE IMEDIATO!
+    })
+    .then(() => {
+      // 2. Notificar TODAS as páginas abertas para recarregar
+      return self.clients.matchAll({ type: 'window' }).then(clients => {
+        console.log(`📱 Encontradas ${clients.length} páginas abertas`);
+        
+        clients.forEach(client => {
+          console.log('📨 Enviando comando RELOAD para:', client.url);
+          client.postMessage({
+            type: 'FORCE_RELOAD',
+            version: APP_VERSION,
+            message: `Nova versão ${APP_VERSION} instalada! Atualizando...`
+          });
+        });
+      });
     })
   );
 });
