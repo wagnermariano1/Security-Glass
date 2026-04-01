@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.6 📦
-// ARQUIVAMENTO mensal de finalizados! Dashboard limpo e rápido!
+// Security Glass App - Main JavaScript v25.7 📊
+// RELATÓRIOS buscam também de arquivos! Histórico completo!
 
-console.log('🔥 Security Glass v25.6!');
+console.log('🔥 Security Glass v25.7!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -3562,7 +3562,7 @@ class ReportsManager {
         return { startDate, endDate };
     }
     
-    static generateFilteredCSV() {
+    static async generateFilteredCSV() {
         console.log('🔍 generateFilteredCSV chamada!');
         
         // Proteção contra múltiplos cliques
@@ -3592,7 +3592,63 @@ class ReportsManager {
         }
         
         const { startDate, endDate } = dateRange;
-        const vehicles = DB.getVehicles();
+        let vehicles = DB.getVehicles();
+        
+        // NOVO: Buscar também de arquivos se período inclui meses anteriores
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
+        const startMes = startDate.getMonth();
+        const startAno = startDate.getFullYear();
+        
+        // Se período inclui mês anterior, buscar do arquivo
+        if (startAno < anoAtual || (startAno === anoAtual && startMes < mesAtual)) {
+            console.log('📦 Período inclui meses anteriores, buscando arquivos...');
+            
+            if (window.firebase && FirebaseDB.initialized) {
+                try {
+                    // Buscar meses do período
+                    const mesesParaBuscar = [];
+                    let dataTemp = new Date(startDate);
+                    
+                    while (dataTemp <= endDate) {
+                        const mesStr = dataTemp.toISOString().substring(0, 7); // "2026-03"
+                        const collectionName = `arquivo_${mesStr.replace('-', '_')}`; // "arquivo_2026_03"
+                        
+                        // Só busca se for mês anterior ao atual
+                        const tempMes = dataTemp.getMonth();
+                        const tempAno = dataTemp.getFullYear();
+                        if (tempAno < anoAtual || (tempAno === anoAtual && tempMes < mesAtual)) {
+                            mesesParaBuscar.push(collectionName);
+                        }
+                        
+                        // Próximo mês
+                        dataTemp.setMonth(dataTemp.getMonth() + 1);
+                    }
+                    
+                    console.log('📚 Buscando em:', mesesParaBuscar);
+                    
+                    // Buscar cada collection de arquivo
+                    const { db, collection, getDocs } = window.firebase;
+                    
+                    for (const collName of mesesParaBuscar) {
+                        try {
+                            const snapshot = await getDocs(collection(db, collName));
+                            const arquivados = snapshot.docs.map(doc => doc.data());
+                            console.log(`✅ ${collName}: ${arquivados.length} carros`);
+                            vehicles = vehicles.concat(arquivados);
+                        } catch (error) {
+                            console.warn(`⚠️ Collection ${collName} não existe ou erro:`, error.message);
+                        }
+                    }
+                    
+                    console.log(`📊 Total com arquivos: ${vehicles.length} carros`);
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao buscar arquivos:', error);
+                }
+            }
+        }
         
         let filtered = [];
         let csvData = '';
@@ -5241,7 +5297,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.6';
+    const VERSAO_ATUAL = 'v25.7';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
