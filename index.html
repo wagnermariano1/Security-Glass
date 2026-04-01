@@ -60,7 +60,7 @@
                 <div class="logo">
                     <img src="logo.png" alt="Security Glass" class="logo-img-login">
                     <p>Sistema de Controle</p>
-                    <p id="appVersionDisplay" style="font-size: 0.9rem; color: #64748b; margin-top: 4px; font-weight: 600;">v25.5</p>
+                    <p id="appVersionDisplay" style="font-size: 0.9rem; color: #64748b; margin-top: 4px; font-weight: 600;">v25.6</p>
                 </div>
                 <form id="loginForm">
                     <div class="form-group">
@@ -337,6 +337,17 @@
                 <!-- Tab Config (só Gestor) -->
                 <div id="configTab" class="tab-content gestor-only" style="display: none;">
                     <h3>⚙️ Configurações</h3>
+                    
+                    <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 16px;">📦 Arquivo Mensal</h4>
+                        <p style="color: #64748b; margin-bottom: 16px;">
+                            Arquive os veículos finalizados do mês anterior para manter o dashboard limpo e rápido.
+                            Os veículos arquivados continuam disponíveis nos relatórios.
+                        </p>
+                        <button onclick="ConfigManager.arquivarFinalizados()" class="btn" style="background: #8b5cf6; color: white;">
+                            📦 Arquivar Finalizados do Mês Anterior
+                        </button>
+                    </div>
                     
                     <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
                         <h4 style="margin-bottom: 16px;">👩‍💼 Gerenciar Vendedores</h4>

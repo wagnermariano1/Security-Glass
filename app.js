@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.5 ⚡
-// FIX CRÍTICO: Delete não salva lista inteira (153 carros)! Só deleta documento específico!
+// Security Glass App - Main JavaScript v25.6 📦
+// ARQUIVAMENTO mensal de finalizados! Dashboard limpo e rápido!
 
-console.log('🔥 Security Glass v25.5!');
+console.log('🔥 Security Glass v25.6!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -5241,7 +5241,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.5';
+    const VERSAO_ATUAL = 'v25.6';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
@@ -5589,6 +5589,122 @@ class ConfigManager {
         
         this.renderVendedoresList();
         alert('✅ Vendedor(a) excluído(a)!');
+    }
+    
+    static async arquivarFinalizados() {
+        console.log('📦 Iniciando arquivamento de finalizados...');
+        
+        // Detectar mês anterior automaticamente
+        const hoje = new Date();
+        const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+        const mesAnteriorStr = mesAnterior.toISOString().substring(0, 7); // "2026-03"
+        const mesNome = mesAnterior.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        
+        const vehicles = DB.getVehicles();
+        
+        // Buscar finalizados do mês anterior
+        const finalizados = vehicles.filter(v => {
+            if (v.status !== 'montado' || !v.montagemData) return false;
+            return v.montagemData.startsWith(mesAnteriorStr);
+        });
+        
+        console.log(`📋 Encontrados ${finalizados.length} finalizados em ${mesNome}`);
+        
+        if (finalizados.length === 0) {
+            alert(`Nenhum veículo finalizado encontrado em ${mesNome}!`);
+            return;
+        }
+        
+        // Confirmar
+        const confirma = confirm(
+            `📦 ARQUIVAR FINALIZADOS DE ${mesNome.toUpperCase()}?\n\n` +
+            `${finalizados.length} veículos serão movidos para o arquivo.\n\n` +
+            `Eles sairão do dashboard mas continuarão disponíveis nos relatórios.\n\n` +
+            `Continuar?`
+        );
+        
+        if (!confirma) {
+            console.log('❌ Arquivamento cancelado pelo usuário');
+            return;
+        }
+        
+        // Verificar Firebase
+        if (!window.firebase || !FirebaseDB.initialized) {
+            alert('❌ Firebase não está disponível! Conecte-se à internet.');
+            return;
+        }
+        
+        try {
+            const { db, collection, doc, setDoc, deleteDoc } = window.firebase;
+            const arquivoCollectionName = `arquivo_${mesAnteriorStr.replace('-', '_')}`; // "arquivo_2026_03"
+            
+            console.log(`💾 Movendo para collection: ${arquivoCollectionName}`);
+            
+            // Mover cada finalizado
+            let sucesso = 0;
+            let erros = 0;
+            
+            for (const v of finalizados) {
+                try {
+                    // 1. Copiar para arquivo
+                    await setDoc(doc(db, arquivoCollectionName, v.id), {
+                        ...v,
+                        arquivadoEm: new Date().toISOString(),
+                        arquivadoPor: APP_STATE.currentUserFullName
+                    });
+                    
+                    // 2. Deletar de vehicles
+                    await deleteDoc(doc(db, 'vehicles', v.id));
+                    
+                    sucesso++;
+                    console.log(`✅ Arquivado: ${v.modelo} (${v.chassi})`);
+                    
+                    // Delay pra não sobrecarregar
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (error) {
+                    console.error(`❌ Erro ao arquivar ${v.id}:`, error);
+                    erros++;
+                }
+            }
+            
+            // Atualizar cache local (remove finalizados)
+            const ativos = vehicles.filter(v => !finalizados.find(f => f.id === v.id));
+            
+            try {
+                localStorage.setItem('vehicles', JSON.stringify(ativos));
+            } catch (e) {
+                console.log('📦 localStorage cheio, só memória');
+            }
+            window.VEHICLES_CACHE = ativos;
+            
+            // Recarregar dashboard
+            Dashboard.renderDashboard();
+            VehiclesManager.loadVehiclesList();
+            
+            // Resultado
+            if (erros === 0) {
+                alert(
+                    `✅ ARQUIVAMENTO CONCLUÍDO!\n\n` +
+                    `${sucesso} veículos arquivados com sucesso.\n\n` +
+                    `Collection: ${arquivoCollectionName}\n\n` +
+                    `Dashboard atualizado!`
+                );
+            } else {
+                alert(
+                    `⚠️ ARQUIVAMENTO PARCIAL\n\n` +
+                    `Sucesso: ${sucesso}\n` +
+                    `Erros: ${erros}\n\n` +
+                    `Verifique o console (F12) para detalhes.`
+                );
+            }
+            
+            console.log(`✅ Arquivamento finalizado: ${sucesso} sucesso, ${erros} erros`);
+            
+        } catch (error) {
+            console.error('❌ Erro no arquivamento:', error);
+            alert(`❌ Erro ao arquivar: ${error.message}\n\nVerifique o console (F12)`);
+        }
     }
 }
 
