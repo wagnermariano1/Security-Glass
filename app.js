@@ -1,7 +1,7 @@
-// Security Glass App - Main JavaScript v25.7 📊
-// RELATÓRIOS buscam também de arquivos! Histórico completo!
+// Security Glass App - Main JavaScript v25.8 🏢
+// MULTI-LOCAL para vendedoras! 1 cadastro, múltiplas lojas!
 
-console.log('🔥 Security Glass v25.7!');
+console.log('🔥 Security Glass v25.8!');
 
 // Firebase Database Layer
 const FirebaseDB = {
@@ -266,14 +266,55 @@ const DB = {
         // Tentar buscar do localStorage primeiro (mais rápido)
         const cached = localStorage.getItem('team');
         if (cached) {
-            return JSON.parse(cached);
+            const team = JSON.parse(cached);
+            
+            // MIGRAÇÃO AUTOMÁTICA: formato antigo → novo (multi-local)
+            if (team.vendedoras && team.vendedoras.length > 0) {
+                let migrou = false;
+                
+                team.vendedoras = team.vendedoras.map(v => {
+                    // Se formato antigo (concessionaria + local)
+                    if (v.concessionaria && !v.locais) {
+                        migrou = true;
+                        console.log(`🔄 Migrando vendedora ${v.nome} para multi-local`);
+                        
+                        return {
+                            nome: v.nome,
+                            senha: v.senha,
+                            ativo: v.ativo !== false,
+                            locais: [{
+                                concessionaria: v.concessionaria,
+                                local: v.local || ''
+                            }]
+                        };
+                    }
+                    
+                    // Se formato novo ou sem dados
+                    if (!v.locais) {
+                        v.locais = [];
+                    }
+                    
+                    return v;
+                });
+                
+                // Se migrou, salva de volta
+                if (migrou) {
+                    console.log('✅ Vendedoras migradas para multi-local');
+                    localStorage.setItem('team', JSON.stringify(team));
+                    if (FirebaseDB.initialized) {
+                        FirebaseDB.saveTeam(team);
+                    }
+                }
+            }
+            
+            return team;
         }
         
         // Padrão inicial SEM Vinicius montador (será adicionado manualmente)
         return {
             aplicadores: ['Jonas', 'Maycon'],
             montadores: ['Rafael', 'Arthur', 'Claiton'],
-            vendedoras: [] // NOVO: lista de vendedoras
+            vendedoras: []
         };
     },
     
@@ -1122,32 +1163,86 @@ class AuthSystem {
                 // Abrir modal
                 document.getElementById('newVehicleModal').classList.add('active');
                 
-                // Pré-preencher concessionária e local
+                // Buscar vendedora
                 const team = DB.getTeam();
                 const username = APP_STATE.currentUser;
                 const vendedora = team.vendedoras?.find(v => 
                     v.nome.toLowerCase().replace(/\s+/g, '') === username
                 );
                 
-                if (vendedora) {
+                if (vendedora && vendedora.locais) {
                     const concInput = document.getElementById('concessionaria');
                     const localInput = document.getElementById('local');
-                    const modeloInput = document.getElementById('modelo');
-                    const chassiInput = document.getElementById('chassi');
                     
-                    if (concInput) {
-                        concInput.value = vendedora.concessionaria;
-                        concInput.setAttribute('readonly', 'true');
-                        concInput.style.background = '#f1f5f9';
-                    }
-                    
-                    if (localInput) {
-                        localInput.value = vendedora.local || '';
-                        localInput.setAttribute('readonly', 'true');
-                        localInput.style.background = '#f1f5f9';
+                    // MULTI-LOCAL: Converter inputs para selects
+                    if (concInput && vendedora.locais.length > 0) {
+                        // Se só tem 1 local, deixa readonly
+                        if (vendedora.locais.length === 1) {
+                            concInput.value = vendedora.locais[0].concessionaria;
+                            concInput.setAttribute('readonly', 'true');
+                            concInput.style.background = '#f1f5f9';
+                            
+                            if (localInput) {
+                                localInput.value = vendedora.locais[0].local;
+                                localInput.setAttribute('readonly', 'true');
+                                localInput.style.background = '#f1f5f9';
+                            }
+                        } else {
+                            // Múltiplos locais: criar select de concessionárias
+                            const concessionariasUnicas = [...new Set(vendedora.locais.map(l => l.concessionaria))];
+                            
+                            // Substituir input por select
+                            const selectConc = document.createElement('select');
+                            selectConc.id = 'concessionaria';
+                            selectConc.required = true;
+                            selectConc.style.width = '100%';
+                            selectConc.style.padding = '12px';
+                            selectConc.style.border = '1px solid #cbd5e1';
+                            selectConc.style.borderRadius = '4px';
+                            
+                            // Opções
+                            selectConc.innerHTML = '<option value="">Selecione...</option>' + 
+                                concessionariasUnicas.map(c => `<option value="${c}">${c}</option>`).join('');
+                            
+                            concInput.parentNode.replaceChild(selectConc, concInput);
+                            
+                            // Event listener para atualizar local
+                            selectConc.addEventListener('change', function() {
+                                const concSelecionada = this.value;
+                                const locaisDisponiveis = vendedora.locais.filter(l => l.concessionaria === concSelecionada);
+                                
+                                const localInput = document.getElementById('local');
+                                
+                                if (locaisDisponiveis.length === 1) {
+                                    // Só 1 local: preenche automático
+                                    localInput.value = locaisDisponiveis[0].local;
+                                    localInput.setAttribute('readonly', 'true');
+                                    localInput.style.background = '#f1f5f9';
+                                } else if (locaisDisponiveis.length > 1) {
+                                    // Múltiplos locais: criar select
+                                    const selectLocal = document.createElement('select');
+                                    selectLocal.id = 'local';
+                                    selectLocal.required = true;
+                                    selectLocal.style.width = '100%';
+                                    selectLocal.style.padding = '12px';
+                                    selectLocal.style.border = '1px solid #cbd5e1';
+                                    selectLocal.style.borderRadius = '4px';
+                                    
+                                    selectLocal.innerHTML = '<option value="">Selecione...</option>' + 
+                                        locaisDisponiveis.map(l => `<option value="${l.local}">${l.local}</option>`).join('');
+                                    
+                                    localInput.parentNode.replaceChild(selectLocal, localInput);
+                                } else {
+                                    localInput.value = '';
+                                }
+                            });
+                        }
                     }
                     
                     // Forçar caixa alta em modelo e chassi
+                    const modeloInput = document.getElementById('modelo');
+                    const chassiInput = document.getElementById('chassi');
+                    
                     if (modeloInput) {
                         modeloInput.addEventListener('input', function() {
                             this.value = this.value.toUpperCase();
@@ -5297,7 +5392,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.7';
+    const VERSAO_ATUAL = 'v25.8';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
@@ -5552,18 +5647,31 @@ class ConfigManager {
             return;
         }
         
-        const html = team.vendedoras.map((v, index) => `
-            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong style="display: block; margin-bottom: 4px;">${v.nome}</strong>
-                    <span style="color: #64748b; font-size: 0.9rem;">${v.concessionaria} - ${v.local}</span>
+        const html = team.vendedoras.map((v, index) => {
+            // Mostrar locais
+            let locaisText = '';
+            if (v.locais && v.locais.length > 0) {
+                locaisText = v.locais.map(l => `${l.concessionaria} - ${l.local}`).join(', ');
+            } else if (v.concessionaria) {
+                // Formato antigo (não deveria acontecer com migração)
+                locaisText = `${v.concessionaria} - ${v.local}`;
+            } else {
+                locaisText = 'Sem locais cadastrados';
+            }
+            
+            return `
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px;">${v.nome}</strong>
+                        <span style="color: #64748b; font-size: 0.9rem;">${locaisText}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="ConfigManager.editVendedor(${index})">✏️ Editar</button>
+                        <button class="btn" style="background: #ef4444; color: white;" onclick="ConfigManager.deleteVendedor(${index})">🗑️ Excluir</button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary" onclick="ConfigManager.editVendedor(${index})">✏️ Editar</button>
-                    <button class="btn" style="background: #ef4444; color: white;" onclick="ConfigManager.deleteVendedor(${index})">🗑️ Excluir</button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         container.innerHTML = html;
     }
@@ -5577,12 +5685,79 @@ class ConfigManager {
         // Popular modal
         document.getElementById('editVendedoraIndex').value = index;
         document.getElementById('editVendedoraNome').value = vendedora.nome;
-        document.getElementById('editVendedoraConcessionaria').value = vendedora.concessionaria;
-        document.getElementById('editVendedoraLocal').value = vendedora.local;
         document.getElementById('editVendedoraSenha').value = '';
+        
+        // Renderizar locais
+        this.renderLocaisList(vendedora.locais || []);
         
         // Abrir modal
         document.getElementById('editVendedoraModal').classList.add('active');
+    }
+    
+    static renderLocaisList(locais) {
+        const container = document.getElementById('editVendedoraLocaisList');
+        
+        if (!locais || locais.length === 0) {
+            container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 12px;">Nenhum local cadastrado. Clique em "+ Adicionar Local"</p>';
+            return;
+        }
+        
+        const html = locais.map((local, idx) => `
+            <div style="background: #f8fafc; padding: 12px; border-radius: 6px; display: flex; gap: 8px; align-items: center;">
+                <div style="flex: 1;">
+                    <input type="text" 
+                           class="local-concessionaria" 
+                           data-index="${idx}"
+                           value="${local.concessionaria}" 
+                           placeholder="Concessionária (ex: VOLVO)" 
+                           style="width: 100%; margin-bottom: 6px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <input type="text" 
+                           class="local-local" 
+                           data-index="${idx}"
+                           value="${local.local}" 
+                           placeholder="Local (ex: Barra)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </div>
+                <button type="button" 
+                        onclick="ConfigManager.removerLocal(${idx})" 
+                        class="btn" 
+                        style="background: #ef4444; color: white; padding: 8px 12px;">
+                    🗑️
+                </button>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+    
+    static adicionarLocal() {
+        const container = document.getElementById('editVendedoraLocaisList');
+        const currentLocais = this.getLocaisFromForm();
+        
+        // Adicionar novo local vazio
+        currentLocais.push({ concessionaria: '', local: '' });
+        this.renderLocaisList(currentLocais);
+    }
+    
+    static removerLocal(index) {
+        const currentLocais = this.getLocaisFromForm();
+        currentLocais.splice(index, 1);
+        this.renderLocaisList(currentLocais);
+    }
+    
+    static getLocaisFromForm() {
+        const locais = [];
+        const concInputs = document.querySelectorAll('.local-concessionaria');
+        const localInputs = document.querySelectorAll('.local-local');
+        
+        concInputs.forEach((input, idx) => {
+            locais.push({
+                concessionaria: input.value.trim().toUpperCase(),
+                local: localInputs[idx].value.trim()
+            });
+        });
+        
+        return locais;
     }
     
     static async saveVendedora() {
@@ -5592,19 +5767,25 @@ class ConfigManager {
         if (index < 0 || index >= team.vendedoras.length) return;
         
         const nome = document.getElementById('editVendedoraNome').value.trim();
-        const concessionaria = document.getElementById('editVendedoraConcessionaria').value;
-        const local = document.getElementById('editVendedoraLocal').value.trim();
         const senha = document.getElementById('editVendedoraSenha').value.trim();
+        const locais = this.getLocaisFromForm();
         
-        if (!nome || !concessionaria || !local) {
-            alert('Preencha todos os campos obrigatórios!');
+        if (!nome) {
+            alert('Preencha o nome!');
+            return;
+        }
+        
+        // Validar locais
+        const locaisValidos = locais.filter(l => l.concessionaria && l.local);
+        
+        if (locaisValidos.length === 0) {
+            alert('Adicione pelo menos 1 local de trabalho!');
             return;
         }
         
         // Atualizar dados
         team.vendedoras[index].nome = nome;
-        team.vendedoras[index].concessionaria = concessionaria;
-        team.vendedoras[index].local = local;
+        team.vendedoras[index].locais = locaisValidos;
         
         // Se digitou nova senha, atualizar
         if (senha) {

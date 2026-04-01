@@ -60,7 +60,7 @@
                 <div class="logo">
                     <img src="logo.png" alt="Security Glass" class="logo-img-login">
                     <p>Sistema de Controle</p>
-                    <p id="appVersionDisplay" style="font-size: 0.9rem; color: #64748b; margin-top: 4px; font-weight: 600;">v25.7</p>
+                    <p id="appVersionDisplay" style="font-size: 0.9rem; color: #64748b; margin-top: 4px; font-weight: 600;">v25.8</p>
                 </div>
                 <form id="loginForm">
                     <div class="form-group">
@@ -360,7 +360,7 @@
 
         <!-- Modal Editar Vendedor -->
         <div id="editVendedoraModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h3>✏️ Editar Vendedor</h3>
                     <button class="modal-close">&times;</button>
@@ -374,18 +374,18 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Concessionária</label>
-                        <input type="text" id="editVendedoraConcessionaria" required placeholder="Ex: RIOZEN, HONDA, BYD...">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Local</label>
-                        <input type="text" id="editVendedoraLocal" required>
-                    </div>
-                    
-                    <div class="form-group">
                         <label>Senha (deixe em branco para manter atual)</label>
                         <input type="password" id="editVendedoraSenha" placeholder="Digite nova senha ou deixe vazio">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Locais de Trabalho</span>
+                            <button type="button" class="btn btn-primary" onclick="ConfigManager.adicionarLocal()" style="font-size: 0.85rem; padding: 6px 12px;">+ Adicionar Local</button>
+                        </label>
+                        <div id="editVendedoraLocaisList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                            <!-- Locais serão inseridos aqui dinamicamente -->
+                        </div>
                     </div>
                     
                     <div class="modal-actions">
