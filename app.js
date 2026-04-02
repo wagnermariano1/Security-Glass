@@ -480,11 +480,20 @@ const DB = {
             console.log('📦 savePasswords: localStorage cheio');
         }
         
-        // Salva no Firebase
+        // Salva no Firebase COM FLAG DE SEGURANÇA
         if (window.firebase && FirebaseDB.initialized) {
             try {
                 const { db, doc, setDoc } = window.firebase;
-                await setDoc(doc(db, 'config', 'passwords'), passwords);
+                
+                // Adiciona metadados de segurança (Firebase Rules exige!)
+                const passwordsWithMetadata = {
+                    ...passwords,
+                    updatedBy: APP_STATE.currentUser || 'system',
+                    updatedByRole: APP_STATE.currentRole || 'unknown',
+                    updatedAt: new Date().toISOString()
+                };
+                
+                await setDoc(doc(db, 'config', 'passwords'), passwordsWithMetadata);
                 console.log('🔐 Senhas salvas no Firebase');
             } catch (error) {
                 console.error('❌ Erro ao salvar senhas no Firebase:', error);
@@ -5458,7 +5467,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.8-auto';
+    const VERSAO_ATUAL = 'v25.8.1';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     
