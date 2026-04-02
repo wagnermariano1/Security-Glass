@@ -836,6 +836,18 @@ class AuthSystem {
                     isValid = true;
                     fullName = vendedora.nome;
                     role = 'vendedora';
+                    
+                    // ⚠️ CHECAR PRIMEIRO ACESSO - FORÇAR TROCA DE SENHA!
+                    if (vendedora.primeiroAcesso === true) {
+                        // Salvar estado temporário
+                        APP_STATE.currentUser = username;
+                        APP_STATE.currentRole = role;
+                        APP_STATE.currentUserFullName = fullName;
+                        
+                        // Mostrar modal OBRIGATÓRIO trocar senha
+                        App.showModalTrocarSenhaPrimeiroAcesso(vendedora);
+                        return; // PARA AQUI! Não deixa entrar ainda!
+                    }
                 } else {
                     alert('Senha incorreta!');
                     passwordInput.value = '';
@@ -1020,6 +1032,165 @@ class AuthSystem {
         } catch (error) {
             console.error('❌ Erro ao limpar cache:', error);
             alert('❌ Erro ao limpar cache: ' + error.message);
+        }
+    }
+
+    // ========================================
+    // MODAL TROCAR SENHA - PRIMEIRO ACESSO
+    // ========================================
+    static showModalTrocarSenhaPrimeiroAcesso(vendedora) {
+        // Remove modal existente se houver
+        const existingModal = document.querySelector('.modal-trocar-senha-obrigatorio');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active modal-trocar-senha-obrigatorio';
+        modal.style.zIndex = '10000';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white;">
+                    <h3 style="margin: 0;">⚠️ Troca de Senha Obrigatória</h3>
+                </div>
+                
+                <div style="padding: 24px;">
+                    <p style="color: #dc2626; font-weight: 600; margin: 0 0 20px 0; font-size: 1rem;">
+                        Por segurança, você precisa trocar sua senha padrão antes de usar o sistema pela primeira vez.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 600;">Senha atual</label>
+                        <input type="password" id="senhaAtualPrimeiroAcesso" class="form-control" 
+                               placeholder="Digite sua senha atual (11111111)" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 600;">Nova senha <span style="color: #64748b;">(mínimo 6 caracteres)</span></label>
+                        <input type="password" id="novaSenhaPrimeiroAcesso" class="form-control" 
+                               placeholder="Digite sua nova senha" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 600;">Confirmar nova senha</label>
+                        <input type="password" id="confirmarSenhaPrimeiroAcesso" class="form-control" 
+                               placeholder="Digite novamente" required>
+                    </div>
+                    
+                    <div style="margin-top: 24px;">
+                        <button class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;" 
+                                onclick="App.salvarNovaSenhaPrimeiroAcesso()">
+                            🔒 Trocar Senha e Entrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Focar no primeiro campo
+        setTimeout(() => {
+            document.getElementById('senhaAtualPrimeiroAcesso').focus();
+        }, 100);
+        
+        // BLOQUEAR close (não pode fechar!)
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                alert('⚠️ Você precisa trocar a senha para continuar!');
+            }
+        };
+        
+        // Enter para submit
+        modal.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                App.salvarNovaSenhaPrimeiroAcesso();
+            }
+        });
+    }
+    
+    static async salvarNovaSenhaPrimeiroAcesso() {
+        const senhaAtual = document.getElementById('senhaAtualPrimeiroAcesso').value;
+        const novaSenha = document.getElementById('novaSenhaPrimeiroAcesso').value;
+        const confirmarSenha = document.getElementById('confirmarSenhaPrimeiroAcesso').value;
+        
+        // Validações
+        if (!senhaAtual || !novaSenha || !confirmarSenha) {
+            alert('❌ Preencha todos os campos!');
+            return;
+        }
+        
+        if (novaSenha !== confirmarSenha) {
+            alert('❌ As senhas não conferem!');
+            document.getElementById('novaSenhaPrimeiroAcesso').value = '';
+            document.getElementById('confirmarSenhaPrimeiroAcesso').value = '';
+            document.getElementById('novaSenhaPrimeiroAcesso').focus();
+            return;
+        }
+        
+        if (novaSenha.length < 6) {
+            alert('❌ A senha deve ter no mínimo 6 caracteres!');
+            document.getElementById('novaSenhaPrimeiroAcesso').focus();
+            return;
+        }
+        
+        if (novaSenha === '11111111') {
+            alert('❌ Não pode usar a senha padrão! Escolha uma senha diferente.');
+            document.getElementById('novaSenhaPrimeiroAcesso').value = '';
+            document.getElementById('confirmarSenhaPrimeiroAcesso').value = '';
+            document.getElementById('novaSenhaPrimeiroAcesso').focus();
+            return;
+        }
+        
+        // Buscar vendedora
+        const team = DB.getTeam();
+        const username = APP_STATE.currentUser;
+        const vendedora = team.vendedoras.find(v => 
+            v.nome.toLowerCase().replace(/\s+/g, '') === username
+        );
+        
+        if (!vendedora) {
+            alert('❌ Erro: vendedora não encontrada!');
+            return;
+        }
+        
+        // Validar senha atual
+        if (vendedora.senha !== senhaAtual) {
+            alert('❌ Senha atual incorreta!');
+            document.getElementById('senhaAtualPrimeiroAcesso').value = '';
+            document.getElementById('senhaAtualPrimeiroAcesso').focus();
+            return;
+        }
+        
+        try {
+            // Atualizar senha E remover flag primeiro acesso
+            vendedora.senha = novaSenha;
+            vendedora.primeiroAcesso = false;
+            vendedora.senhaAlteradaEm = new Date().toISOString();
+            
+            // Salvar no Firebase
+            await DB.saveTeam(team);
+            
+            console.log('✅ Senha alterada com sucesso no primeiro acesso!');
+            
+            // Remover modal
+            const modal = document.querySelector('.modal-trocar-senha-obrigatorio');
+            if (modal) modal.remove();
+            
+            // Mostrar mensagem sucesso
+            alert('✅ Senha alterada com sucesso! Bem-vinda ao sistema!');
+            
+            // AGORA SIM deixa entrar no sistema!
+            App.showDashboard();
+            
+            // Inicializar notificações
+            setTimeout(async () => {
+                await PushNotifications.init();
+                console.log('✅ Notificações ativadas para:', APP_STATE.currentUser);
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Erro ao salvar nova senha:', error);
+            alert('❌ Erro ao salvar senha: ' + error.message);
         }
     }
 
@@ -5467,7 +5638,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('🔥 Inicializando Firebase...');
     
     // Verificar versão e limpar cache se necessário
-    const VERSAO_ATUAL = 'v25.8.1';
+    const VERSAO_ATUAL = 'v25.8.2';
     const VERSAO_MINIMA_PERMITIDA = 25.1; // Versão mínima para funcionar - SÓ v25.1+
     const ultimaVersao = localStorage.getItem('appVersion');
     

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'security-glass-v25.8.1'; // ← MUDOU!
-const APP_VERSION = 'v25.8.1'; // ← NOVO!
+const CACHE_NAME = 'security-glass-v25.8.2';
+const APP_VERSION = 'v25.8.2';
 const urlsToCache = [
   '/',
   '/index.html',
