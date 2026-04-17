@@ -294,7 +294,7 @@ const FirebaseDB = {
         
         try {
             const { db, doc, setDoc } = window.firebase;
-            await setDoc(doc(db, 'config', 'team'), team);
+            await setDoc(doc(db, 'config', 'team'), { ...team, appSource: 'security-glass-app' });
         } catch (error) {
             console.error('Erro ao salvar equipe:', error);
             DB.saveTeam(team);
