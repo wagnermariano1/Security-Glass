@@ -2729,6 +2729,19 @@ class VehicleForm {
         
         console.log('📝 Dados:', {modelo, chassi, concessionaria});
         
+        // BLOQUEIO: impedir cadastro duplicado (mesmo chassi + concessionária)
+        const vehiclesCheck = DB.getVehicles();
+        const duplicateVehicle = vehiclesCheck.find(v =>
+            v.chassi === chassi &&
+            v.concessionaria === concessionaria
+        );
+        
+        if (duplicateVehicle) {
+            alert('⚠️ Esse chassi já está cadastrado!\n\nFale com o Vinicius para fazer alterações no pedido existente.');
+            console.log('🚫 Cadastro bloqueado - chassi duplicado:', chassi);
+            return;
+        }
+        
         // CAPTURAR E COMPRIMIR FOTO OS (se existir)
         let fotoOS = null;
         const photoPreview = document.getElementById('photoPreview');
